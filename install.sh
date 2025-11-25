@@ -9,6 +9,8 @@ cd "$SCRIPT_DIR"
 
 echo "=========================================="
 echo "ASUS Fan Control - Installation"
+echo "see https://github.com/deanwheatley/asus-control"
+echo "contact deanwheatley@hotmail.com for support"
 echo "=========================================="
 echo ""
 
@@ -19,21 +21,75 @@ if ! command -v python3 > /dev/null 2>&1; then
 fi
 
 PYTHON_VERSION=$(python3 --version | cut -d' ' -f2 | cut -d'.' -f1,2)
-echo "✅ Found Python $PYTHON_VERSION"
+PYTHON_FULL_VERSION=$(python3 --version | cut -d' ' -f2)
+echo "✅ Found Python $PYTHON_FULL_VERSION"
 
-# Check python3-venv
-if ! python3 -m venv --help > /dev/null 2>&1; then
+# Check if venv module is actually available and functional
+echo "🔍 Checking venv module..."
+TEMP_VENV_TEST=$(mktemp -d)
+VENV_AVAILABLE=true
+if ! python3 -m venv "$TEMP_VENV_TEST" > /dev/null 2>&1; then
+    rm -rf "$TEMP_VENV_TEST"
+    VENV_AVAILABLE=false
+    
     echo ""
-    echo "❌ Error: python3-venv is not installed."
+    echo "⚠️  python3-venv is not properly installed."
     echo ""
-    echo "Please install it with:"
-    echo "  sudo apt install python${PYTHON_VERSION}-venv"
+    echo "The venv module cannot create virtual environments."
     echo ""
-    echo "Then run this installer again."
-    exit 1
+    
+    # Check if we can install it automatically
+    if command -v apt > /dev/null 2>&1; then
+        echo "I can install it automatically for you."
+        read -p "Install python${PYTHON_VERSION}-venv now? (Y/n): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            echo "📦 Installing python${PYTHON_VERSION}-venv..."
+            if sudo apt install -y python${PYTHON_VERSION}-venv; then
+                echo "✅ python${PYTHON_VERSION}-venv installed successfully"
+                VENV_AVAILABLE=true
+            else
+                echo ""
+                echo "❌ Failed to install python${PYTHON_VERSION}-venv automatically."
+                echo "Please install it manually:"
+                echo "  sudo apt install python${PYTHON_VERSION}-venv"
+                echo ""
+                echo "Then run this installer again."
+                exit 1
+            fi
+        else
+            echo ""
+            echo "Skipping automatic installation."
+            echo "Please install it manually:"
+            echo "  sudo apt install python${PYTHON_VERSION}-venv"
+            echo ""
+            echo "Then run this installer again."
+            exit 1
+        fi
+    else
+        echo "apt package manager not found. Please install it manually:"
+        echo "  sudo apt install python${PYTHON_VERSION}-venv"
+        echo ""
+        echo "Then run this installer again."
+        exit 1
+    fi
 fi
 
-echo "✅ python3-venv is available"
+if [ "$VENV_AVAILABLE" = true ]; then
+    # Verify venv works now (only if we just installed it)
+    TEMP_VENV_TEST=$(mktemp -d)
+    if ! python3 -m venv "$TEMP_VENV_TEST" > /dev/null 2>&1; then
+        rm -rf "$TEMP_VENV_TEST"
+        echo ""
+        echo "❌ Error: venv still not working after installation."
+        echo "You may need to restart your terminal or run:"
+        echo "  hash -r"
+        exit 1
+    fi
+    rm -rf "$TEMP_VENV_TEST"
+fi
+
+echo "✅ python3-venv is available and functional"
 echo ""
 
 # Create virtual environment
@@ -50,7 +106,37 @@ fi
 
 if [ ! -d "venv" ]; then
     echo "📦 Creating virtual environment..."
-    python3 -m venv venv
+    if ! python3 -m venv venv; then
+        echo ""
+        echo "❌ Error: Failed to create virtual environment."
+        echo ""
+        echo "This usually means python3-venv is not installed."
+        echo ""
+        if command -v apt > /dev/null 2>&1; then
+            echo "Attempting to install python${PYTHON_VERSION}-venv automatically..."
+            if sudo apt install -y python${PYTHON_VERSION}-venv; then
+                echo "✅ Installed successfully. Retrying venv creation..."
+                if python3 -m venv venv; then
+                    echo "✅ Virtual environment created"
+                else
+                    echo "❌ Still failed. Please install manually and try again."
+                    exit 1
+                fi
+            else
+                echo "❌ Failed to install. Please install manually:"
+                echo "  sudo apt install python${PYTHON_VERSION}-venv"
+                echo ""
+                echo "Then run this installer again."
+                exit 1
+            fi
+        else
+            echo "Please install it manually:"
+            echo "  sudo apt install python${PYTHON_VERSION}-venv"
+            echo ""
+            echo "Then run this installer again."
+            exit 1
+        fi
+    fi
     echo "✅ Virtual environment created"
 fi
 
