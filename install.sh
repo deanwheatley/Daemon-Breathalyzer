@@ -433,8 +433,6 @@ EOF
 
 chmod +x "$DESKTOP_FILE"
 
-# Clean up splash image before completion message
-cleanup_splash
 
 echo "=========================================="
 echo "✅ Installation Complete!"
