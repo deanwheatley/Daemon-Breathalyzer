@@ -351,7 +351,6 @@ class MainWindow(QMainWindow):
         
         # Create fan curve editor
         self.fan_curve_editor = FanCurveEditor()
-        self.fan_curve_editor.curve_changed.connect(self._on_fan_curve_changed)
         layout.addWidget(self.fan_curve_editor)
         
         return widget
