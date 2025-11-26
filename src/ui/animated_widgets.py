@@ -24,7 +24,7 @@ class AnimatedMetricCard(QWidget):
         self.unit = unit
         self.color = color
         self.value = None
-        self.animated_value = 0.0
+        self._animated_value = 0.0  # Private attribute to avoid recursion
         self._glow_intensity = 0.0
         
         # Animation properties
@@ -118,7 +118,7 @@ class AnimatedMetricCard(QWidget):
             self.value = None
             if self.value_animation:
                 self.value_animation.stop()
-            self.animated_value = 0
+            self._animated_value = 0
             if hasattr(self, 'particle_overlay'):
                 self.particle_overlay.set_value(0)
             return
@@ -128,13 +128,13 @@ class AnimatedMetricCard(QWidget):
             self.value = None
             if self.value_animation:
                 self.value_animation.stop()
-            self.animated_value = 0
+            self._animated_value = 0
             if hasattr(self, 'particle_overlay'):
                 self.particle_overlay.set_value(0)
             return
         
         # Animate value change
-        old_value = self.animated_value if self.value is not None else value
+        old_value = self._animated_value if self.value is not None else value
         self.value = value
         
         if self.value_animation:
@@ -149,18 +149,28 @@ class AnimatedMetricCard(QWidget):
         if hasattr(self, 'particle_overlay'):
             self.particle_overlay.set_value(abs(value))
     
-    def _on_value_animated(self, animated_val):
-        """Update display as value animates."""
-        self.animated_value = animated_val
+    def get_animated_value(self) -> float:
+        """Get current animated value."""
+        return self._animated_value
+    
+    def set_animated_value(self, value: float):
+        """Set animated value and update display."""
+        self._animated_value = value
         if self.value is not None:
             # Determine decimals based on value
-            decimals = 1 if abs(animated_val) < 100 else 0
-            self.value_label.setText(f"{animated_val:.{decimals}f}")
+            decimals = 1 if abs(value) < 100 else 0
+            self.value_label.setText(f"{value:.{decimals}f}")
             
             # Update particle effects for high values
             if hasattr(self, 'particle_overlay'):
-                self.particle_overlay.set_value(abs(animated_val))
+                self.particle_overlay.set_value(abs(value))
         self.update()
+    
+    animated_value = pyqtProperty(float, get_animated_value, set_animated_value)
+    
+    def _on_value_animated(self, animated_val):
+        """Update display as value animates (deprecated, use set_animated_value)."""
+        self.set_animated_value(animated_val)
     
     def paintEvent(self, event):
         """Paint glow effect."""
@@ -191,8 +201,8 @@ class AnimatedIcon(QWidget):
     def __init__(self, icon_path: str, parent=None):
         super().__init__(parent)
         self.icon_path = icon_path
-        self.rotation_angle = 0.0
-        self.scale_factor = 1.0
+        self._rotation_angle = 0.0  # Private attribute to avoid recursion
+        self._scale_factor = 1.0    # Private attribute to avoid recursion
         self._setup_animations()
     
     def _setup_animations(self):
@@ -216,19 +226,19 @@ class AnimatedIcon(QWidget):
         self.pulse_animation.start()
     
     def get_rotation_angle(self) -> float:
-        return self.rotation_angle
+        return self._rotation_angle
     
     def set_rotation_angle(self, angle: float):
-        self.rotation_angle = angle
+        self._rotation_angle = angle
         self.update()
     
     rotation_angle = pyqtProperty(float, get_rotation_angle, set_rotation_angle)
     
     def get_scale_factor(self) -> float:
-        return self.scale_factor
+        return self._scale_factor
     
     def set_scale_factor(self, scale: float):
-        self.scale_factor = scale
+        self._scale_factor = scale
         self.update()
     
     scale_factor = pyqtProperty(float, get_scale_factor, set_scale_factor)
