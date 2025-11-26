@@ -152,11 +152,24 @@ class FanStatusWidget(QWidget):
             curves = self.asusctl.get_fan_curves(current_profile)
             self.current_curve = curves.get(self.fan_name)
             
+            # If no curve found, use default Balanced curve
+            if not self.current_curve:
+                from ..control.asusctl_interface import get_preset_curve
+                self.current_curve = get_preset_curve('balanced')
+                print(f"Using default Balanced curve for {self.fan_name}")
+            
             if self.current_curve:
                 self._update_curve_plot()
         except Exception as e:
             print(f"Error loading curve for {self.fan_name}: {e}")
-            self.current_curve = None
+            # Even on error, provide default curve
+            try:
+                from ..control.asusctl_interface import get_preset_curve
+                self.current_curve = get_preset_curve('balanced')
+                if self.current_curve:
+                    self._update_curve_plot()
+            except:
+                self.current_curve = None
     
     def _update_curve_plot(self):
         """Update the curve plot with current curve."""
