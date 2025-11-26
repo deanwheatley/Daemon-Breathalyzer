@@ -205,14 +205,18 @@ class FanStatusWidget(QWidget):
     
     def _update_current_position_marker(self):
         """Update the horizontal line and intersection point showing current fan speed on the curve."""
-        if not self.current_curve or self.current_rpm is None:
-            # Remove markers if no data
+        # Show horizontal line even if no curve is loaded (just based on current fan speed)
+        if self.current_rpm is None:
+            # Remove markers if no RPM data
             if self.horizontal_line is not None:
                 self.graph_widget.removeItem(self.horizontal_line)
                 self.horizontal_line = None
             if self.intersection_point is not None:
                 self.graph_widget.removeItem(self.intersection_point)
                 self.intersection_point = None
+            for glow_item in self.glow_layers:
+                self.graph_widget.removeItem(glow_item)
+            self.glow_layers.clear()
             return
         
         # Calculate current fan speed percentage (0-100%)
@@ -233,53 +237,54 @@ class FanStatusWidget(QWidget):
             name='Current Fan Speed'
         )
         
-        # Find intersection point where horizontal line meets the fan curve
-        intersection_temp = self._find_intersection_temperature(current_speed_pct)
-        
-        # Remove old intersection point and glow layers
-        if self.intersection_point is not None:
-            self.graph_widget.removeItem(self.intersection_point)
-            self.intersection_point = None
-        for glow_item in self.glow_layers:
-            self.graph_widget.removeItem(glow_item)
-        self.glow_layers.clear()
-        
-        if intersection_temp is not None:
-            # Draw glowing dot at intersection point
-            # Create a glowing effect with multiple circles
-            glow_color = QColor(GAME_COLORS['accent_green'])
+        # Find intersection point where horizontal line meets the fan curve (only if curve exists)
+        if self.current_curve and self.current_curve.points:
+            intersection_temp = self._find_intersection_temperature(current_speed_pct)
             
-            # Outer glow (larger, semi-transparent)
-            glow_outer = self.graph_widget.plot(
-                [intersection_temp], [current_speed_pct],
-                pen=None,
-                symbol='o',
-                symbolBrush=pg.mkBrush(color=(glow_color.red(), glow_color.green(), glow_color.blue(), 60)),
-                symbolSize=20,
-                name='Glow Outer'
-            )
-            self.glow_layers.append(glow_outer)
+            # Remove old intersection point and glow layers
+            if self.intersection_point is not None:
+                self.graph_widget.removeItem(self.intersection_point)
+                self.intersection_point = None
+            for glow_item in self.glow_layers:
+                self.graph_widget.removeItem(glow_item)
+            self.glow_layers.clear()
             
-            # Middle glow (medium, more visible)
-            glow_middle = self.graph_widget.plot(
-                [intersection_temp], [current_speed_pct],
-                pen=None,
-                symbol='o',
-                symbolBrush=pg.mkBrush(color=(glow_color.red(), glow_color.green(), glow_color.blue(), 120)),
-                symbolSize=14,
-                name='Glow Middle'
-            )
-            self.glow_layers.append(glow_middle)
-            
-            # Inner dot (solid, bright)
-            self.intersection_point = self.graph_widget.plot(
-                [intersection_temp], [current_speed_pct],
-                pen=pg.mkPen(color=GAME_COLORS['accent_cyan'], width=2),
-                symbol='o',
-                symbolBrush=pg.mkBrush(color=GAME_COLORS['accent_green']),
-                symbolSize=10,
-                name='Intersection Point'
-            )
+            if intersection_temp is not None:
+                # Draw glowing dot at intersection point
+                # Create a glowing effect with multiple circles
+                glow_color = QColor(GAME_COLORS['accent_green'])
+                
+                # Outer glow (larger, semi-transparent)
+                glow_outer = self.graph_widget.plot(
+                    [intersection_temp], [current_speed_pct],
+                    pen=None,
+                    symbol='o',
+                    symbolBrush=pg.mkBrush(color=(glow_color.red(), glow_color.green(), glow_color.blue(), 60)),
+                    symbolSize=20,
+                    name='Glow Outer'
+                )
+                self.glow_layers.append(glow_outer)
+                
+                # Middle glow (medium, more visible)
+                glow_middle = self.graph_widget.plot(
+                    [intersection_temp], [current_speed_pct],
+                    pen=None,
+                    symbol='o',
+                    symbolBrush=pg.mkBrush(color=(glow_color.red(), glow_color.green(), glow_color.blue(), 120)),
+                    symbolSize=14,
+                    name='Glow Middle'
+                )
+                self.glow_layers.append(glow_middle)
+                
+                # Inner dot (solid, bright)
+                self.intersection_point = self.graph_widget.plot(
+                    [intersection_temp], [current_speed_pct],
+                    pen=pg.mkPen(color=GAME_COLORS['accent_cyan'], width=2),
+                    symbol='o',
+                    symbolBrush=pg.mkBrush(color=GAME_COLORS['accent_green']),
+                    symbolSize=10,
+                    name='Intersection Point'
+                )
     
     def _find_intersection_temperature(self, target_speed_pct: float) -> float:
         """
