@@ -93,6 +93,10 @@ class MainWindow(QMainWindow):
         self.test_fans_tab = self._create_test_fans_tab()
         self.tabs.addTab(self.test_fans_tab, "Test Fans")
         
+        # Create apply profiles tab
+        self.apply_profiles_tab = self._create_apply_profiles_tab()
+        self.tabs.addTab(self.apply_profiles_tab, "Apply Profiles")
+        
         # Create about tab
         self.about_tab = AboutTab(self)
         self.tabs.addTab(self.about_tab, "About")
@@ -374,6 +378,11 @@ class MainWindow(QMainWindow):
         """Create the test fans tab."""
         from .test_fans_tab import TestFansTab
         return TestFansTab(self.monitor, self.asusctl, self)
+    
+    def _create_apply_profiles_tab(self) -> QWidget:
+        """Create the apply profiles tab."""
+        from .apply_profiles_tab import ApplyProfilesTab
+        return ApplyProfilesTab(self)
     
     def _restore_persistent_curves(self):
         """Restore persistent fan curves on startup."""

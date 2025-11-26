@@ -49,6 +49,7 @@ class HelpTab(QWidget):
         tabs.addTab(self._create_getting_started_tab(), "Getting Started")
         tabs.addTab(self._create_dashboard_help_tab(), "Dashboard")
         tabs.addTab(self._create_fan_curves_help_tab(), "Fan Curves")
+        tabs.addTab(self._create_apply_profiles_help_tab(), "Apply Profiles")
         tabs.addTab(self._create_troubleshooting_tab(), "Troubleshooting")
         
         layout.addWidget(tabs)
@@ -87,6 +88,7 @@ class HelpTab(QWidget):
             <li>Monitor your system's CPU, GPU, memory, and temperatures in real-time</li>
             <li>Configure custom fan curves for your ASUS laptop</li>
             <li>Save and manage fan curve profiles</li>
+            <li>Apply profiles to different ASUS power profiles (Balanced, Quiet, Performance)</li>
         </ul>
         
         <h3>🚀 First Launch</h3>
@@ -215,6 +217,63 @@ class HelpTab(QWidget):
             <li>Temperature range: 30-90°C</li>
             <li>Fan speed range: 0-100%</li>
         </ul>
+        """
+        return self._create_scrollable_content(content)
+    
+    def _create_apply_profiles_help_tab(self) -> QWidget:
+        """Create apply profiles help content."""
+        content = """
+        <h2 style="color: #00BCD4;">Apply Profiles</h2>
+        
+        <h3>🎯 What is Apply Profiles?</h3>
+        <p>The Apply Profiles screen allows you to apply saved fan curve profiles to your system. 
+        After designing curves in the Fan Curve Designer, you can apply them to specific ASUS power profiles 
+        (Balanced, Quiet, or Performance).</p>
+        
+        <h3>📋 How to Apply a Profile</h3>
+        <ol>
+            <li><strong>Select a Profile:</strong> Choose a saved profile from the list on the left</li>
+            <li><strong>Choose ASUS Profile:</strong> Select which ASUS power profile (Balanced, Quiet, or Performance) to apply the curves to</li>
+            <li><strong>Review Details:</strong> Check the profile info to see which curves (CPU/GPU) are included</li>
+            <li><strong>Apply:</strong> Click the "Apply Profile" button to apply the curves to your system</li>
+        </ol>
+        
+        <h3>⚙️ ASUS Power Profiles</h3>
+        <p>ASUS laptops have three power profiles, each with separate fan curve settings:</p>
+        <ul>
+            <li><strong>Balanced:</strong> Default profile for general use</li>
+            <li><strong>Quiet:</strong> Optimized for low noise (slower fans)</li>
+            <li><strong>Performance:</strong> Optimized for maximum cooling (faster fans)</li>
+        </ul>
+        <p>You can apply different fan curve profiles to each ASUS power profile. The curves will activate when you switch to that power profile.</p>
+        
+        <h3>📊 Current Status Display</h3>
+        <p>The status panel shows:</p>
+        <ul>
+            <li>Currently active ASUS power profile</li>
+            <li>Which fan curves are currently applied (CPU and GPU)</li>
+            <li>Whether fan curves are enabled or disabled</li>
+        </ul>
+        <p>The status updates automatically every 2 seconds to show the current system state.</p>
+        
+        <h3>⚠️ Important Notes</h3>
+        <ul>
+            <li>Applying a profile will replace any existing curves for the selected ASUS profile</li>
+            <li>Fan curves must be enabled for the ASUS profile (done automatically when applying)</li>
+            <li>You need to switch to the target ASUS power profile for the curves to take effect</li>
+            <li>Changes are saved persistently and will survive reboots</li>
+        </ul>
+        
+        <h3>💡 Workflow</h3>
+        <p><strong>Complete workflow:</strong></p>
+        <ol>
+            <li>Design curves in <strong>Fan Curve Designer</strong></li>
+            <li>Save your design as a profile</li>
+            <li>Switch to <strong>Apply Profiles</strong> tab</li>
+            <li>Select your profile and choose an ASUS power profile</li>
+            <li>Click "Apply Profile" to activate the curves</li>
+            <li>Switch your ASUS power profile to the target profile to use the curves</li>
+        </ol>
         """
         return self._create_scrollable_content(content)
     

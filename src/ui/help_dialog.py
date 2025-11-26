@@ -62,6 +62,9 @@ class HelpDialog(QDialog):
         # Profiles tab
         tabs.addTab(self._create_profiles_help_tab(), "Profiles")
         
+        # Apply Profiles tab
+        tabs.addTab(self._create_apply_profiles_help_tab(), "Apply Profiles")
+        
         # Troubleshooting tab
         tabs.addTab(self._create_troubleshooting_tab(), "Troubleshooting")
         
@@ -137,6 +140,7 @@ class HelpDialog(QDialog):
         <ul>
             <li><strong>Dashboard:</strong> View real-time system metrics and graphs</li>
             <li><strong>Fan Curve Designer:</strong> Design, load, and save fan curve configurations</li>
+            <li><strong>Apply Profiles:</strong> Apply saved fan curve profiles to your system</li>
             <li><strong>Profiles:</strong> Save and manage your fan curve profiles</li>
             <li><strong>Settings:</strong> Application preferences (coming soon)</li>
         </ul>
@@ -322,7 +326,7 @@ class HelpDialog(QDialog):
             <li>The profile will be loaded into the Fan Curve Designer</li>
         </ul>
         
-        <p><strong>Note:</strong> Loading a profile loads it into the designer. To apply it to your system, use a different screen (coming soon).</p>
+        <p><strong>Note:</strong> Loading a profile loads it into the designer. To apply it to your system, use the <strong>Apply Profiles</strong> tab.</p>
         
         <h3>🗑️ Deleting Profiles</h3>
         <ol>
@@ -362,6 +366,72 @@ class HelpDialog(QDialog):
             <li>Export important profiles as backups</li>
             <li>You can import profiles shared by others</li>
         </ul>
+        
+        <h3>🚀 Applying Profiles</h3>
+        <p>To apply a saved profile to your system:</p>
+        <ol>
+            <li>Go to the <strong>Apply Profiles</strong> tab</li>
+            <li>Select a profile from the list</li>
+            <li>Choose which ASUS power profile (Balanced, Quiet, or Performance) to apply to</li>
+            <li>Click "Apply Profile"</li>
+        </ol>
+        <p>See the <strong>Apply Profiles</strong> help section for detailed instructions.</p>
+        """
+        return self._create_scrollable_content(content)
+    
+    def _create_apply_profiles_help_tab(self) -> QWidget:
+        """Create apply profiles help content."""
+        content = """
+        <h2>Apply Profiles</h2>
+        
+        <h3>🎯 What is Apply Profiles?</h3>
+        <p>The Apply Profiles screen allows you to apply saved fan curve profiles to your system. 
+        After designing curves in the Fan Curve Designer, you can apply them to specific ASUS power profiles 
+        (Balanced, Quiet, or Performance).</p>
+        
+        <h3>📋 How to Apply a Profile</h3>
+        <ol>
+            <li><strong>Select a Profile:</strong> Choose a saved profile from the list on the left</li>
+            <li><strong>Choose ASUS Profile:</strong> Select which ASUS power profile (Balanced, Quiet, or Performance) to apply the curves to</li>
+            <li><strong>Review Details:</strong> Check the profile info to see which curves (CPU/GPU) are included</li>
+            <li><strong>Apply:</strong> Click the "Apply Profile" button to apply the curves to your system</li>
+        </ol>
+        
+        <h3>⚙️ ASUS Power Profiles</h3>
+        <p>ASUS laptops have three power profiles, each with separate fan curve settings:</p>
+        <ul>
+            <li><strong>Balanced:</strong> Default profile for general use</li>
+            <li><strong>Quiet:</strong> Optimized for low noise (slower fans)</li>
+            <li><strong>Performance:</strong> Optimized for maximum cooling (faster fans)</li>
+        </ul>
+        <p>You can apply different fan curve profiles to each ASUS power profile. The curves will activate when you switch to that power profile.</p>
+        
+        <h3>📊 Current Status Display</h3>
+        <p>The status panel shows:</p>
+        <ul>
+            <li>Currently active ASUS power profile</li>
+            <li>Which fan curves are currently applied (CPU and GPU)</li>
+            <li>Whether fan curves are enabled or disabled</li>
+        </ul>
+        <p>The status updates automatically every 2 seconds to show the current system state.</p>
+        
+        <h3>⚠️ Important Notes</h3>
+        <ul>
+            <li>Applying a profile will replace any existing curves for the selected ASUS profile</li>
+            <li>Fan curves must be enabled for the ASUS profile (done automatically when applying)</li>
+            <li>You need to switch to the target ASUS power profile for the curves to take effect</li>
+            <li>Changes are saved persistently and will survive reboots</li>
+        </ul>
+        
+        <h3>💡 Complete Workflow</h3>
+        <ol>
+            <li>Design curves in <strong>Fan Curve Designer</strong></li>
+            <li>Save your design as a profile</li>
+            <li>Switch to <strong>Apply Profiles</strong> tab</li>
+            <li>Select your profile and choose an ASUS power profile</li>
+            <li>Click "Apply Profile" to activate the curves</li>
+            <li>Switch your ASUS power profile to the target profile to use the curves</li>
+        </ol>
         """
         return self._create_scrollable_content(content)
     

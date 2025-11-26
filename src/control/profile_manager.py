@@ -6,10 +6,15 @@ Manages fan curve profiles with save/load functionality.
 """
 
 import json
-import yaml
 from pathlib import Path
 from typing import Dict, List, Optional
 from datetime import datetime
+
+try:
+    import yaml
+    YAML_AVAILABLE = True
+except ImportError:
+    YAML_AVAILABLE = False
 
 from .asusctl_interface import FanCurve, Profile as AsusProfile
 
