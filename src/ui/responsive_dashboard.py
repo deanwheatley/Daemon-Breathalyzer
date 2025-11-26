@@ -190,13 +190,13 @@ class ResponsiveDashboard(QWidget):
         self._update_layout()
     
     def _show_preferences_dialog(self):
-        """Show preferences dialog for hiding/showing meters."""
-        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QCheckBox, QPushButton, QScrollArea
+        """Show preferences dialog for hiding/showing meters and averaging settings."""
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QCheckBox, QPushButton, QScrollArea, QLabel, QSpinBox, QHBoxLayout, QGroupBox
         from ..control.asusctl_interface import Profile
         
         dialog = QDialog(self)
         dialog.setWindowTitle("Dashboard Preferences")
-        dialog.setMinimumSize(400, 500)
+        dialog.setMinimumSize(450, 600)
         dialog.setStyleSheet(f"""
             QDialog {{
                 background-color: {GAME_COLORS['bg_medium']};
@@ -206,7 +206,7 @@ class ResponsiveDashboard(QWidget):
         
         layout = QVBoxLayout(dialog)
         
-        title = QLabel("Show/Hide Meters")
+        title = QLabel("Dashboard Preferences")
         title_font = QFont()
         title_font.setPointSize(16)
         title_font.setBold(True)
@@ -217,6 +217,73 @@ class ResponsiveDashboard(QWidget):
         scroll = QScrollArea()
         scroll_widget = QWidget()
         scroll_layout = QVBoxLayout(scroll_widget)
+        
+        # Averaging settings group
+        avg_group = QGroupBox("Averaging Settings")
+        avg_group.setStyleSheet(f"""
+            QGroupBox {{
+                color: {GAME_COLORS['text_primary']};
+                font-size: 14px;
+                font-weight: bold;
+                border: 2px solid {GAME_COLORS['border']};
+                border-radius: 8px;
+                margin-top: 10px;
+                padding-top: 15px;
+            }}
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }}
+        """)
+        avg_layout = QVBoxLayout(avg_group)
+        
+        avg_label = QLabel("Averaging Window (seconds):")
+        avg_label.setStyleSheet(f"color: {GAME_COLORS['text_primary']}; font-size: 12px; margin-bottom: 5px;")
+        avg_layout.addWidget(avg_label)
+        
+        avg_hbox = QHBoxLayout()
+        avg_spinbox = QSpinBox()
+        avg_spinbox.setMinimum(0)
+        avg_spinbox.setMaximum(300)
+        avg_spinbox.setValue(self.preferences_manager.get_preference('averaging_window_seconds', 60))
+        avg_spinbox.setSuffix(" seconds")
+        avg_spinbox.setStyleSheet(f"""
+            QSpinBox {{
+                color: {GAME_COLORS['text_primary']};
+                background-color: {GAME_COLORS['bg_card']};
+                border: 2px solid {GAME_COLORS['border']};
+                border-radius: 4px;
+                padding: 5px;
+                font-size: 12px;
+            }}
+            QSpinBox::up-button, QSpinBox::down-button {{
+                background-color: {GAME_COLORS['bg_dark']};
+                border: 1px solid {GAME_COLORS['border']};
+                width: 20px;
+            }}
+            QSpinBox::up-button:hover, QSpinBox::down-button:hover {{
+                background-color: {GAME_COLORS['accent_blue']};
+            }}
+        """)
+        avg_hbox.addWidget(avg_spinbox)
+        avg_hbox.addStretch()
+        avg_layout.addLayout(avg_hbox)
+        
+        avg_hint = QLabel("Set to 0 to disable averaging. Applies to Network, GPU Usage, and FPS metrics.")
+        avg_hint.setStyleSheet(f"color: {GAME_COLORS['text_secondary']}; font-size: 11px; font-style: italic; margin-top: 5px;")
+        avg_layout.addWidget(avg_hint)
+        
+        scroll_layout.addWidget(avg_group)
+        
+        # Meter visibility group
+        meters_title = QLabel("Show/Hide Meters")
+        meters_title_font = QFont()
+        meters_title_font.setPointSize(14)
+        meters_title_font.setBold(True)
+        meters_title.setFont(meters_title_font)
+        meters_title.setStyleSheet(f"color: {GAME_COLORS['accent_blue']}; margin-top: 15px; margin-bottom: 10px;")
+        scroll_layout.addWidget(meters_title)
         
         checkboxes = {}
         for widget_name in sorted(self.metric_widgets.keys()):
@@ -256,7 +323,7 @@ class ResponsiveDashboard(QWidget):
         
         apply_btn = QPushButton("Apply")
         apply_btn.setStyleSheet(GAME_STYLES['button'])
-        apply_btn.clicked.connect(lambda: self._apply_preferences(checkboxes, dialog))
+        apply_btn.clicked.connect(lambda: self._apply_preferences(checkboxes, avg_spinbox, dialog))
         
         cancel_btn = QPushButton("Cancel")
         cancel_btn.setStyleSheet(GAME_STYLES['button'])
@@ -268,10 +335,16 @@ class ResponsiveDashboard(QWidget):
         
         dialog.exec()
     
-    def _apply_preferences(self, checkboxes: Dict[str, QCheckBox], dialog):
-        """Apply visibility preferences."""
+    def _apply_preferences(self, checkboxes: Dict[str, QCheckBox], avg_spinbox, dialog):
+        """Apply visibility preferences and averaging settings."""
+        # Apply visibility preferences
         for widget_name, checkbox in checkboxes.items():
             self.preferences_manager.set_meter_visible(widget_name, checkbox.isChecked())
+        
+        # Apply averaging window preference
+        avg_window = avg_spinbox.value()
+        self.preferences_manager.set_preference('averaging_window_seconds', avg_window)
+        
         self._update_visibility()
         dialog.accept()
     
