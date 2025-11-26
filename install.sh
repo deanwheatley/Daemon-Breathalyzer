@@ -10,7 +10,7 @@ cd "$SCRIPT_DIR"
 
 echo "=========================================="
 echo "Daemon Breathalyzer - Installation"
-echo "see https://github.com/deanwheatley/asus-control"
+echo "see https://github.com/deanwheatley/Daemon-Breathalyzer"
 echo "contact deanwheatley@hotmail.com for support"
 echo "=========================================="
 echo ""
