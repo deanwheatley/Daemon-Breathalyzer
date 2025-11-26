@@ -20,6 +20,7 @@ import os
 
 from ..control.asusctl_interface import AsusctlInterface, Profile, FanCurve, FanCurvePoint
 from ..monitoring.system_monitor import SystemMonitor
+from .game_style_theme import GAME_COLORS, GAME_STYLES
 
 
 class FanTestTile(QGroupBox):
