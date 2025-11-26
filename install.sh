@@ -167,62 +167,57 @@ echo ""
 # Verify critical Python libraries are installed
 echo "🔍 Verifying critical libraries..."
 MISSING_LIBS=()
+
+# Define libraries with their display name, import name, and package name
+# Format: "display_name:import_name:package_name"
 CRITICAL_LIBS=(
-    "PyQt6"
-    "PyQtGraph"
-    "psutil"
-    "numpy"
+    "PyQt6:PyQt6:PyQt6"
+    "PyQtGraph:pyqtgraph:pyqtgraph"
+    "psutil:psutil:psutil"
+    "numpy:numpy:numpy"
 )
 
-# Map import names to package names (some differ)
-LIB_PACKAGE_MAP=(
-    "PyQt6:PyQt6"
-    "PyQtGraph:pyqtgraph"
-    "psutil:psutil"
-    "numpy:numpy"
-)
+# Use venv Python and pip if available, otherwise system Python
+if [ -f "$SCRIPT_DIR/venv/bin/python3" ]; then
+    PYTHON_CMD="$SCRIPT_DIR/venv/bin/python3"
+    PIP_CMD="$SCRIPT_DIR/venv/bin/pip"
+else
+    PYTHON_CMD="python3"
+    PIP_CMD="pip"
+fi
 
-for lib in "${CRITICAL_LIBS[@]}"; do
-    # Map import name to package name
-    pkg_name="$lib"
-    case "$lib" in
-        "PyQtGraph")
-            pkg_name="pyqtgraph"
-            ;;
-        *)
-            pkg_name="$lib"
-            ;;
-    esac
+for lib_entry in "${CRITICAL_LIBS[@]}"; do
+    # Parse the entry: display_name:import_name:package_name
+    IFS=':' read -r display_name import_name pkg_name <<< "$lib_entry"
     
-    if ! python3 -c "import ${lib}" 2>/dev/null; then
+    # Check if library is importable using the correct Python interpreter
+    if ! "$PYTHON_CMD" -c "import ${import_name}" 2>/dev/null; then
         MISSING_LIBS+=("$pkg_name")
-        echo "  ⚠️  $lib: NOT FOUND"
+        echo "  ⚠️  $display_name: NOT FOUND"
     else
-        echo "  ✅ $lib: OK"
+        echo "  ✅ $display_name: OK"
     fi
 done
 
 if [ ${#MISSING_LIBS[@]} -gt 0 ]; then
     echo ""
-    echo "❌ Error: Critical libraries are missing: ${MISSING_LIBS[*]}"
+    echo "⚠️  Some critical libraries are missing: ${MISSING_LIBS[*]}"
     echo ""
     echo "Attempting to install missing libraries..."
     for pkg in "${MISSING_LIBS[@]}"; do
         echo "  Installing $pkg..."
-        pip install -q "$pkg" || echo "    ⚠️  Failed to install $pkg"
+        if "$PIP_CMD" install -q "$pkg" 2>/dev/null; then
+            echo "    ✅ Successfully installed $pkg"
+        else
+            echo "    ⚠️  Failed to install $pkg"
+        fi
     done
     
-    # Re-check using import names
+    # Re-check using import names with venv Python
     STILL_MISSING=()
-    for lib in "${CRITICAL_LIBS[@]}"; do
-        if ! python3 -c "import ${lib}" 2>/dev/null; then
-            # Map back to package name for installation command
-            pkg_name="$lib"
-            case "$lib" in
-                "PyQtGraph")
-                    pkg_name="pyqtgraph"
-                    ;;
-            esac
+    for lib_entry in "${CRITICAL_LIBS[@]}"; do
+        IFS=':' read -r display_name import_name pkg_name <<< "$lib_entry"
+        if ! "$PYTHON_CMD" -c "import ${import_name}" 2>/dev/null; then
             STILL_MISSING+=("$pkg_name")
         fi
     done
@@ -432,7 +427,6 @@ Keywords=asus;fan;temperature;cooling;laptop;control;
 EOF
 
 chmod +x "$DESKTOP_FILE"
-
 
 echo "=========================================="
 echo "✅ Installation Complete!"
