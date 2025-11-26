@@ -98,6 +98,11 @@ class MainWindow(QMainWindow):
         self.help_tab = HelpTab(self)
         self.tabs.addTab(self.help_tab, "Help")
         
+        # Create help tab
+        from .help_tab import HelpTab
+        self.help_tab = HelpTab(self)
+        self.tabs.addTab(self.help_tab, "Help")
+        
         # Create about tab
         self.about_tab = AboutTab(self)
         self.tabs.addTab(self.about_tab, "About")
@@ -143,12 +148,12 @@ class MainWindow(QMainWindow):
             }
         """)
         
-        # Help menu
+        # Help menu (simplified - Help is now a tab)
         help_menu = menubar.addMenu("Help")
         
         help_action = QAction("Help Documentation", self)
         help_action.setShortcut("F1")
-        help_action.triggered.connect(self._show_help)
+        help_action.triggered.connect(lambda: self.tabs.setCurrentWidget(self.help_tab))
         help_menu.addAction(help_action)
         
         help_menu.addSeparator()
@@ -160,7 +165,7 @@ class MainWindow(QMainWindow):
         help_menu.addSeparator()
         
         about_action = QAction("About", self)
-        about_action.triggered.connect(self._show_about)
+        about_action.triggered.connect(lambda: self.tabs.setCurrentWidget(self.about_tab))
         help_menu.addAction(about_action)
     
     def _show_dependency_dialog(self):
