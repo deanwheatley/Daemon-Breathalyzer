@@ -98,11 +98,6 @@ class MainWindow(QMainWindow):
         self.help_tab = HelpTab(self)
         self.tabs.addTab(self.help_tab, "Help")
         
-        # Create help tab
-        from .help_tab import HelpTab
-        self.help_tab = HelpTab(self)
-        self.tabs.addTab(self.help_tab, "Help")
-        
         # Create about tab
         self.about_tab = AboutTab(self)
         self.tabs.addTab(self.about_tab, "About")
@@ -564,26 +559,6 @@ class MainWindow(QMainWindow):
             if icon_path.exists():
                 return icon_path
         return None
-    
-    def _create_header_bar(self) -> QWidget:
-        """Create header bar (icon moved to dashboard tab)."""
-        header = QWidget()
-        header.setFixedHeight(60)
-        header.setStyleSheet("""
-            QWidget {
-                background-color: white;
-                border-bottom: 1px solid #e0e0e0;
-            }
-        """)
-        
-        layout = QHBoxLayout(header)
-        layout.setContentsMargins(20, 10, 20, 10)
-        layout.setSpacing(0)
-        
-        # Header is now just a separator - icon moved to dashboard tab
-        layout.addStretch()
-        
-        return header
     
     def _create_system_tray(self):
         """Create system tray icon and menu."""
