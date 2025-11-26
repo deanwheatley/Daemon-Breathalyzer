@@ -9,7 +9,8 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 )
 from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtGui import QFont, QDesktopServices
+from PyQt6.QtGui import QFont, QDesktopServices, QPixmap
+from pathlib import Path
 from typing import Optional
 
 from .game_style_theme import GAME_COLORS, GAME_STYLES
@@ -47,9 +48,15 @@ class AboutTab(QWidget):
         subtitle_font = QFont()
         subtitle_font.setPointSize(16)
         subtitle.setFont(subtitle_font)
-        subtitle.setStyleSheet(f"color: {GAME_COLORS['text_secondary']}; margin-bottom: 40px;")
+        subtitle.setStyleSheet(f"color: {GAME_COLORS['text_secondary']}; margin-bottom: 20px;")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(subtitle)
+        
+        # Daemon image
+        daemon_image_label = self._create_daemon_image()
+        if daemon_image_label:
+            layout.addWidget(daemon_image_label)
+            layout.addSpacing(20)
         
         # Description
         description = QLabel(
@@ -155,4 +162,36 @@ class AboutTab(QWidget):
     def _open_url(self, url: str):
         """Open a URL in the default browser."""
         QDesktopServices.openUrl(QUrl(url))
+    
+    def _create_daemon_image(self) -> Optional[QLabel]:
+        """Create a QLabel displaying the daemon image."""
+        # Find the project root (3 levels up from src/ui/about_tab.py)
+        project_root = Path(__file__).parent.parent.parent
+        daemon_image_path = project_root / "img" / "daemon.png"
+        
+        if not daemon_image_path.exists():
+            return None
+        
+        # Create label for image
+        image_label = QLabel()
+        
+        # Load and scale the pixmap
+        pixmap = QPixmap(str(daemon_image_path))
+        if pixmap.isNull():
+            return None
+        
+        # Scale image to reasonable size (max 300x300, maintain aspect ratio)
+        max_size = 300
+        if pixmap.width() > max_size or pixmap.height() > max_size:
+            pixmap = pixmap.scaled(
+                max_size, max_size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+        
+        image_label.setPixmap(pixmap)
+        image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        image_label.setStyleSheet("background: transparent; padding: 10px;")
+        
+        return image_label
 
