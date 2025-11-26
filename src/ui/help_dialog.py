@@ -56,8 +56,8 @@ class HelpDialog(QDialog):
         # Dashboard tab
         tabs.addTab(self._create_dashboard_help_tab(), "Dashboard")
         
-        # Fan Curves tab
-        tabs.addTab(self._create_fan_curves_help_tab(), "Fan Curves")
+        # Fan Curve Designer tab
+        tabs.addTab(self._create_fan_curves_help_tab(), "Fan Curve Designer")
         
         # Profiles tab
         tabs.addTab(self._create_profiles_help_tab(), "Profiles")

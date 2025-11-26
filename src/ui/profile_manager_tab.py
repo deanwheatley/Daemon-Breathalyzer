@@ -292,7 +292,7 @@ class ProfileManagerTab(QWidget):
                     self,
                     "Created",
                     f"Profile '{name}' created with default balanced curves!\n\n"
-                    "Switch to the Fan Curves tab to customize the curves, "
+                    "Switch to the Fan Curve Designer tab to customize the curves, "
                     "then come back to save your changes."
                 )
                 self.refresh_profile_list()
@@ -312,7 +312,7 @@ class ProfileManagerTab(QWidget):
             QMessageBox.warning(
                 self,
                 "No Curves",
-                "Please configure fan curves in the Fan Curves tab first."
+                "Please configure fan curves in the Fan Curve Designer tab first."
             )
             return
         
