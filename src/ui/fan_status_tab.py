@@ -452,6 +452,10 @@ class FanStatusWidget(QWidget):
                     self._update_curve_widget_title()
         except Exception as e:
             print(f"Error reloading curve for {self.fan_name}: {e}")
+        
+        # Always update the horizontal line and intersection marker with current fan speed
+        # This ensures the line updates even if the curve hasn't changed
+        self._update_current_position_marker()
     
     def _update_curve_widget_title(self):
         """Update the curve widget title with current profile name."""
