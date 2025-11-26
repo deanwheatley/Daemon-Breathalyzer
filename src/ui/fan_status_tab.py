@@ -31,6 +31,7 @@ class FanStatusWidget(QWidget):
         self.current_temp = None
         self.current_rpm = None
         self.current_load = None
+        self.glow_layers = []  # Initialize glow layers list
         
         self._init_ui()
         self._load_curve()
@@ -136,7 +137,9 @@ class FanStatusWidget(QWidget):
         
         # Plot items
         self.curve_plot = None  # The fan curve line
-        self.current_point = None  # Current position marker
+        self.horizontal_line = None  # Horizontal line representing current fan speed
+        self.intersection_point = None  # Glowing dot at intersection of horizontal line and curve
+        self.glow_layers = []  # List of glow effect layers for the intersection point
         
         layout.addWidget(self.graph_widget)
         
@@ -160,8 +163,11 @@ class FanStatusWidget(QWidget):
         if not self.current_curve or not self.current_curve.points:
             return
         
-        # Clear existing plots
+        # Clear existing plots (this will also clear horizontal line and intersection point)
         self.graph_widget.clear()
+        self.horizontal_line = None
+        self.intersection_point = None
+        self.glow_layers.clear()
         
         # Get curve points
         temps = [p.temperature for p in self.current_curve.points]
@@ -194,49 +200,134 @@ class FanStatusWidget(QWidget):
                 name='Control Points'
             )
         
-        # Update current position marker if we have current temp
-        if self.current_temp is not None:
-            self._update_current_position_marker()
+        # Update horizontal line and intersection marker (redraw after curve is updated)
+        self._update_current_position_marker()
     
     def _update_current_position_marker(self):
-        """Update the marker showing current position on the curve."""
-        if self.current_temp is None or not self.current_curve:
+        """Update the horizontal line and intersection point showing current fan speed on the curve."""
+        if not self.current_curve or self.current_rpm is None:
+            # Remove markers if no data
+            if self.horizontal_line is not None:
+                self.graph_widget.removeItem(self.horizontal_line)
+                self.horizontal_line = None
+            if self.intersection_point is not None:
+                self.graph_widget.removeItem(self.intersection_point)
+                self.intersection_point = None
             return
         
-        # Calculate expected fan speed at current temperature
-        expected_speed = self.current_curve.get_fan_speed_at_temp(int(self.current_temp))
+        # Calculate current fan speed percentage (0-100%)
+        max_rpm = 6000
+        current_speed_pct = min(100, max(0, (self.current_rpm / max_rpm) * 100) if max_rpm > 0 else 0)
         
-        # Remove old marker
-        if self.current_point is not None:
-            self.graph_widget.removeItem(self.current_point)
+        # Remove old horizontal line
+        if self.horizontal_line is not None:
+            self.graph_widget.removeItem(self.horizontal_line)
         
-        # Add new marker with game-style colors
-        self.current_point = self.graph_widget.plot(
-            [self.current_temp], [expected_speed],
-            pen=None,
-            symbol='x',
-            symbolBrush=pg.mkBrush(color=GAME_COLORS['accent_red']),
-            symbolPen=pg.mkPen(color=GAME_COLORS['accent_orange'], width=3),
-            symbolSize=15,
-            name='Current Position'
+        # Draw horizontal line at current fan speed percentage
+        # Line spans the entire temperature range (25 to 95)
+        temp_min, temp_max = 25, 95
+        self.horizontal_line = self.graph_widget.plot(
+            [temp_min, temp_max],
+            [current_speed_pct, current_speed_pct],
+            pen=pg.mkPen(color=GAME_COLORS['accent_green'], width=2, style=Qt.PenStyle.DashLine),
+            name='Current Fan Speed'
         )
         
-        # Also show actual fan speed if available
-        if self.current_rpm is not None:
-            # Estimate fan speed % (assuming max RPM around 6000, adjust if needed)
-            max_rpm = 6000
-            actual_speed_pct = min(100, (self.current_rpm / max_rpm) * 100) if max_rpm > 0 else 0
+        # Find intersection point where horizontal line meets the fan curve
+        intersection_temp = self._find_intersection_temperature(current_speed_pct)
+        
+        # Remove old intersection point and glow layers
+        if self.intersection_point is not None:
+            self.graph_widget.removeItem(self.intersection_point)
+            self.intersection_point = None
+        for glow_item in self.glow_layers:
+            self.graph_widget.removeItem(glow_item)
+        self.glow_layers.clear()
+        
+        if intersection_temp is not None:
+            # Draw glowing dot at intersection point
+            # Create a glowing effect with multiple circles
+            glow_color = QColor(GAME_COLORS['accent_green'])
             
-            # Add marker for actual speed with game-style colors
-            self.actual_point = self.graph_widget.plot(
-                [self.current_temp], [actual_speed_pct],
+            # Outer glow (larger, semi-transparent)
+            glow_outer = self.graph_widget.plot(
+                [intersection_temp], [current_speed_pct],
                 pen=None,
                 symbol='o',
-                symbolBrush=pg.mkBrush(color=GAME_COLORS['accent_green']),
-                symbolPen=pg.mkPen(color=GAME_COLORS['accent_cyan'], width=2),
-                symbolSize=12,
-                name='Actual Speed'
+                symbolBrush=pg.mkBrush(color=(glow_color.red(), glow_color.green(), glow_color.blue(), 60)),
+                symbolSize=20,
+                name='Glow Outer'
             )
+            self.glow_layers.append(glow_outer)
+            
+            # Middle glow (medium, more visible)
+            glow_middle = self.graph_widget.plot(
+                [intersection_temp], [current_speed_pct],
+                pen=None,
+                symbol='o',
+                symbolBrush=pg.mkBrush(color=(glow_color.red(), glow_color.green(), glow_color.blue(), 120)),
+                symbolSize=14,
+                name='Glow Middle'
+            )
+            self.glow_layers.append(glow_middle)
+            
+            # Inner dot (solid, bright)
+            self.intersection_point = self.graph_widget.plot(
+                [intersection_temp], [current_speed_pct],
+                pen=pg.mkPen(color=GAME_COLORS['accent_cyan'], width=2),
+                symbol='o',
+                symbolBrush=pg.mkBrush(color=GAME_COLORS['accent_green']),
+                symbolSize=10,
+                name='Intersection Point'
+            )
+    
+    def _find_intersection_temperature(self, target_speed_pct: float) -> float:
+        """
+        Find the temperature at which the fan curve intersects the target fan speed.
+        Returns None if no intersection is found.
+        """
+        if not self.current_curve or not self.current_curve.points:
+            return None
+        
+        # Get sorted curve points
+        points = sorted(self.current_curve.points, key=lambda p: p.temperature)
+        
+        # Check if target speed is outside curve bounds
+        min_speed = min(p.fan_speed for p in points)
+        max_speed = max(p.fan_speed for p in points)
+        
+        if target_speed_pct < min_speed:
+            # Below minimum, return first point's temperature
+            return float(points[0].temperature)
+        if target_speed_pct > max_speed:
+            # Above maximum, return last point's temperature
+            return float(points[-1].temperature)
+        
+        # Find the segment where the curve crosses the target speed
+        for i in range(len(points) - 1):
+            p1 = points[i]
+            p2 = points[i + 1]
+            
+            speed1, speed2 = p1.fan_speed, p2.fan_speed
+            
+            # Check if target speed is within this segment
+            if min(speed1, speed2) <= target_speed_pct <= max(speed1, speed2):
+                # Linear interpolation to find temperature
+                if speed2 == speed1:
+                    # Horizontal segment - use midpoint
+                    return (p1.temperature + p2.temperature) / 2.0
+                
+                # Linear interpolation
+                temp_diff = p2.temperature - p1.temperature
+                speed_diff = speed2 - speed1
+                ratio = (target_speed_pct - speed1) / speed_diff
+                intersection_temp = p1.temperature + ratio * temp_diff
+                
+                return intersection_temp
+        
+        # Fallback: find closest point
+        closest_point = min(points, key=lambda p: abs(p.fan_speed - target_speed_pct))
+        return float(closest_point.temperature)
     
     def update_status(self):
         """Update the status display with latest metrics."""
@@ -297,9 +388,8 @@ class FanStatusWidget(QWidget):
         except:
             pass
         
-        # Update position marker
-        if self.current_temp is not None:
-            self._update_current_position_marker()
+        # Update horizontal line and intersection marker based on current fan speed
+        self._update_current_position_marker()
 
 
 class FanStatusTab(QWidget):
