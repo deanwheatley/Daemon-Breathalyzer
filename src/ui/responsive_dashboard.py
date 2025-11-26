@@ -117,7 +117,11 @@ class ResponsiveDashboard(QWidget):
         # CPU metrics
         self.metric_widgets['cpu_percent'] = AnimatedMetricCard("CPU Usage", "%", GAME_COLORS['accent_blue'])
         self.metric_widgets['cpu_temp'] = AnimatedMetricCard("CPU Temp", "°C", GAME_COLORS['accent_red'])
+        # CPU Frequency card - disable particle effects (MHz values are too high for percentage-based particles)
         self.metric_widgets['cpu_freq'] = AnimatedMetricCard("CPU Freq", "MHz", GAME_COLORS['accent_green'])
+        # Disable particle effects for CPU frequency (it's in MHz, not percentage)
+        if hasattr(self.metric_widgets['cpu_freq'], 'particle_overlay'):
+            self.metric_widgets['cpu_freq'].particle_overlay.set_threshold(999999.0)  # Effectively disable
         
         # Memory metrics
         self.metric_widgets['memory'] = AnimatedMetricCard("Memory", "%", GAME_COLORS['accent_orange'])
