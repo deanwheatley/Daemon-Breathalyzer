@@ -48,6 +48,7 @@ class PreferencesManager:
             'ui_theme': 'game',  # 'game', 'modern', 'classic'
             'animations_enabled': True,
             'icon_animated': True,
+            'averaging_window_seconds': 60,  # Default 60-second averaging for Network, GPU, FPS
         }
         
         self.preferences = self._load_preferences()

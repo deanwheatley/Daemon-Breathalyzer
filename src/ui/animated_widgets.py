@@ -58,13 +58,14 @@ class AnimatedMetricCard(QWidget):
         self.value_label.setStyleSheet(f"color: {self.color};")
         layout.addWidget(self.value_label)
         
-        # Unit label
+        # Unit label (hidden - units shown inline with value)
         if self.unit:
             self.unit_label = QLabel(self.unit)
             unit_font = QFont()
             unit_font.setPointSize(9)
             self.unit_label.setFont(unit_font)
             self.unit_label.setStyleSheet(f"color: {GAME_COLORS['text_dim']};")
+            self.unit_label.hide()  # Hide - units shown inline
             layout.addWidget(self.unit_label)
         
         self.setMinimumHeight(140)
@@ -133,6 +134,9 @@ class AnimatedMetricCard(QWidget):
                 self.particle_overlay.set_value(0)
             return
         
+        # Store decimals preference for animated updates
+        self._display_decimals = decimals
+        
         # Animate value change
         old_value = self._animated_value if self.value is not None else value
         self.value = value
@@ -157,9 +161,13 @@ class AnimatedMetricCard(QWidget):
         """Set animated value and update display."""
         self._animated_value = value
         if self.value is not None:
-            # Determine decimals based on value
-            decimals = 1 if abs(value) < 100 else 0
-            self.value_label.setText(f"{value:.{decimals}f}")
+            # Use stored decimals preference, default to 1
+            decimals = getattr(self, '_display_decimals', 1)
+            # Combine value and unit on same line
+            if self.unit:
+                self.value_label.setText(f"{value:.{decimals}f} {self.unit}")
+            else:
+                self.value_label.setText(f"{value:.{decimals}f}")
             
             # Update particle effects for high values
             if hasattr(self, 'particle_overlay'):

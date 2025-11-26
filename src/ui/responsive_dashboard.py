@@ -29,7 +29,7 @@ class ResponsiveDashboard(QWidget):
         super().__init__(parent)
         self.monitor = monitor
         self.asusctl = asusctl
-        self.preferences = PreferencesManager()
+        self.preferences_manager = PreferencesManager()
         
         # Store all metric widgets
         self.metric_widgets: Dict[str, QWidget] = {}
@@ -174,7 +174,7 @@ class ResponsiveDashboard(QWidget):
         
         for widget_name in widget_order:
             if widget_name in self.metric_widgets:
-                if self.preferences.is_meter_visible(widget_name):
+                if self.preferences_manager.is_meter_visible(widget_name):
                     widget = self.metric_widgets[widget_name]
                     self.scroll_layout.addWidget(widget, row, col)
                     col += 1
@@ -185,7 +185,7 @@ class ResponsiveDashboard(QWidget):
     def _update_visibility(self):
         """Update widget visibility based on preferences."""
         for widget_name, widget in self.metric_widgets.items():
-            visible = self.preferences.is_meter_visible(widget_name)
+            visible = self.preferences_manager.is_meter_visible(widget_name)
             widget.setVisible(visible)
         self._update_layout()
     
@@ -221,7 +221,7 @@ class ResponsiveDashboard(QWidget):
         checkboxes = {}
         for widget_name in sorted(self.metric_widgets.keys()):
             cb = QCheckBox(widget_name.replace('_', ' ').title())
-            cb.setChecked(self.preferences.is_meter_visible(widget_name))
+            cb.setChecked(self.preferences_manager.is_meter_visible(widget_name))
             cb.setStyleSheet(f"""
                 QCheckBox {{
                     color: {GAME_COLORS['text_primary']};
@@ -271,7 +271,7 @@ class ResponsiveDashboard(QWidget):
     def _apply_preferences(self, checkboxes: Dict[str, QCheckBox], dialog):
         """Apply visibility preferences."""
         for widget_name, checkbox in checkboxes.items():
-            self.preferences.set_meter_visible(widget_name, checkbox.isChecked())
+            self.preferences_manager.set_meter_visible(widget_name, checkbox.isChecked())
         self._update_visibility()
         dialog.accept()
     
@@ -291,28 +291,73 @@ class ResponsiveDashboard(QWidget):
         if 'memory_used' in self.metric_widgets:
             self.metric_widgets['memory_used'].set_value(metrics.get('memory_used_gb', 0.0), decimals=2)
         
-        # GPU
-        if 'gpu_usage' in self.metric_widgets:
-            gpu_util = metrics.get('gpu_utilization', 0.0) or 0.0
-            self.metric_widgets['gpu_usage'].set_value(gpu_util)
+        # GPU (usage will be handled below with averaging)
         if 'gpu_temp' in self.metric_widgets:
             self.metric_widgets['gpu_temp'].set_value(metrics.get('gpu_temp'))
         if 'gpu_memory' in self.metric_widgets:
             self.metric_widgets['gpu_memory'].set_value(metrics.get('gpu_memory_percent'))
         
-        # Network
+        # Network - use averaged values if preference enabled
         if 'network_sent' in self.metric_widgets:
-            self.metric_widgets['network_sent'].set_value(metrics.get('network_sent_mbps', 0.0), decimals=2)
+            avg_window = self.preferences_manager.get_preference('averaging_window_seconds', 60)
+            if avg_window > 0:
+                avg_value = self.monitor.get_average_over_seconds('network_sent_mbps', avg_window)
+                if avg_value is not None:
+                    self.metric_widgets['network_sent'].set_value(avg_value, decimals=2)
+                else:
+                    self.metric_widgets['network_sent'].set_value(metrics.get('network_sent_mbps', 0.0), decimals=2)
+            else:
+                self.metric_widgets['network_sent'].set_value(metrics.get('network_sent_mbps', 0.0), decimals=2)
         if 'network_recv' in self.metric_widgets:
-            self.metric_widgets['network_recv'].set_value(metrics.get('network_recv_mbps', 0.0), decimals=2)
+            avg_window = self.preferences_manager.get_preference('averaging_window_seconds', 60)
+            if avg_window > 0:
+                avg_value = self.monitor.get_average_over_seconds('network_recv_mbps', avg_window)
+                if avg_value is not None:
+                    self.metric_widgets['network_recv'].set_value(avg_value, decimals=2)
+                else:
+                    self.metric_widgets['network_recv'].set_value(metrics.get('network_recv_mbps', 0.0), decimals=2)
+            else:
+                self.metric_widgets['network_recv'].set_value(metrics.get('network_recv_mbps', 0.0), decimals=2)
         if 'network_total' in self.metric_widgets:
-            self.metric_widgets['network_total'].set_value(metrics.get('network_total_mbps', 0.0), decimals=2)
+            avg_window = self.preferences_manager.get_preference('averaging_window_seconds', 60)
+            if avg_window > 0:
+                avg_value = self.monitor.get_average_over_seconds('network_total_mbps', avg_window)
+                if avg_value is not None:
+                    self.metric_widgets['network_total'].set_value(avg_value, decimals=2)
+                else:
+                    self.metric_widgets['network_total'].set_value(metrics.get('network_total_mbps', 0.0), decimals=2)
+            else:
+                self.metric_widgets['network_total'].set_value(metrics.get('network_total_mbps', 0.0), decimals=2)
         
-        # FPS
+        # GPU Usage - use averaged value
+        if 'gpu_usage' in self.metric_widgets:
+            avg_window = self.preferences_manager.get_preference('averaging_window_seconds', 60)
+            if avg_window > 0:
+                avg_value = self.monitor.get_average_over_seconds('gpu_utilization', avg_window)
+                if avg_value is not None:
+                    self.metric_widgets['gpu_usage'].set_value(avg_value)
+                else:
+                    gpu_util = metrics.get('gpu_utilization', 0.0) or 0.0
+                    self.metric_widgets['gpu_usage'].set_value(gpu_util)
+            else:
+                gpu_util = metrics.get('gpu_utilization', 0.0) or 0.0
+                self.metric_widgets['gpu_usage'].set_value(gpu_util)
+        
+        # FPS - use averaged value
         if 'fps' in self.metric_widgets:
-            fps = metrics.get('fps')
-            self.metric_widgets['fps'].set_value(fps, decimals=0) if fps is not None else \
-                self.metric_widgets['fps'].set_value(None, text="N/A")
+            avg_window = self.preferences_manager.get_preference('averaging_window_seconds', 60)
+            if avg_window > 0:
+                avg_value = self.monitor.get_average_over_seconds('fps', avg_window)
+                if avg_value is not None:
+                    self.metric_widgets['fps'].set_value(avg_value, decimals=0)
+                else:
+                    fps = metrics.get('fps')
+                    self.metric_widgets['fps'].set_value(fps, decimals=0) if fps is not None else \
+                        self.metric_widgets['fps'].set_value(None, text="N/A")
+            else:
+                fps = metrics.get('fps')
+                self.metric_widgets['fps'].set_value(fps, decimals=0) if fps is not None else \
+                    self.metric_widgets['fps'].set_value(None, text="N/A")
         
         # Fan speeds
         fan_speeds = metrics.get('fan_speeds', [])

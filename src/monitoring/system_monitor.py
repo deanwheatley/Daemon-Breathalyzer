@@ -60,6 +60,10 @@ class SystemMonitor:
             'memory_percent': deque(maxlen=history_size),
             'gpu_utilization': deque(maxlen=history_size),
             'gpu_temp': deque(maxlen=history_size),
+            'network_sent_mbps': deque(maxlen=history_size),
+            'network_recv_mbps': deque(maxlen=history_size),
+            'network_total_mbps': deque(maxlen=history_size),
+            'fps': deque(maxlen=history_size),
             'timestamp': deque(maxlen=history_size),
         }
         
@@ -467,6 +471,11 @@ class SystemMonitor:
             self.history['gpu_utilization'].append(self.metrics['gpu_utilization'])
         if self.metrics['gpu_temp'] is not None:
             self.history['gpu_temp'].append(self.metrics['gpu_temp'])
+        self.history['network_sent_mbps'].append(self.metrics['network_sent_mbps'])
+        self.history['network_recv_mbps'].append(self.metrics['network_recv_mbps'])
+        self.history['network_total_mbps'].append(self.metrics['network_total_mbps'])
+        if self.metrics['fps'] is not None:
+            self.history['fps'].append(self.metrics['fps'])
     
     def _monitoring_loop(self):
         """Background thread loop for continuous monitoring."""
@@ -501,6 +510,42 @@ class SystemMonitor:
         return {
             key: list(values) for key, values in self.history.items()
         }
+    
+    def get_average_over_seconds(self, metric_key: str, seconds: int = 60) -> Optional[float]:
+        """
+        Calculate average value for a metric over the last N seconds.
+        
+        Args:
+            metric_key: Key in history dict (e.g., 'network_sent_mbps', 'gpu_utilization', 'fps')
+            seconds: Number of seconds to average over
+            
+        Returns:
+            Average value or None if insufficient data
+        """
+        if metric_key not in self.history:
+            return None
+        
+        timestamps = list(self.history['timestamp'])
+        values = list(self.history[metric_key])
+        
+        if len(timestamps) < 2 or len(values) < 2:
+            return None
+        
+        # Get current time and calculate cutoff
+        current_time = time.time()
+        cutoff_time = current_time - seconds
+        
+        # Filter values within the time window
+        valid_values = []
+        for ts, val in zip(timestamps, values):
+            if ts >= cutoff_time and val is not None:
+                valid_values.append(val)
+        
+        if not valid_values:
+            return None
+        
+        # Calculate average
+        return sum(valid_values) / len(valid_values)
 
 
 # Convenience function for testing
