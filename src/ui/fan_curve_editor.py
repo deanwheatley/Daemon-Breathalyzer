@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fan Curve Editor Widget
+Fan Curve Designer Widget
 
 Interactive fan curve designer focused on designing, loading, and saving curves.
 """
