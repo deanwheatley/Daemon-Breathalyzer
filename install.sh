@@ -8,6 +8,79 @@ set -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
+# Display installer splash image if available
+show_splash_image() {
+    # Try multiple possible image locations
+    local image_file=""
+    for possible_path in \
+        "$SCRIPT_DIR/img/installer_splash.png" \
+        "$SCRIPT_DIR/img/splash.png" \
+        "$SCRIPT_DIR/img/icon.png" \
+        "$SCRIPT_DIR/installer_splash.png" \
+        "$SCRIPT_DIR/splash.png"; do
+        if [ -f "$possible_path" ]; then
+            image_file="$possible_path"
+            break
+        fi
+    done
+    
+    if [ -z "$image_file" ] || [ ! -f "$image_file" ]; then
+        return 0  # No image found, silently continue
+    fi
+    
+    local splash_pid=""
+    
+    # Try to display image in a window
+    if command -v feh > /dev/null 2>&1; then
+        # feh - lightweight image viewer
+        feh --title "Daemon Breathalyzer - Installing..." \
+            --geometry 400x400+100+100 \
+            --borderless \
+            --no-menus \
+            --keep-above \
+            "$image_file" 2>/dev/null &
+        splash_pid=$!
+    elif command -v eog > /dev/null 2>&1; then
+        # Eye of GNOME
+        eog --new-instance "$image_file" 2>/dev/null &
+        splash_pid=$!
+    elif command -v zenity > /dev/null 2>&1; then
+        # zenity info dialog with icon
+        zenity --info \
+               --title="Daemon Breathalyzer" \
+               --text="Installing...\n\nPlease wait while the installation completes." \
+               --window-icon="$image_file" \
+               --no-wrap 2>/dev/null &
+        splash_pid=$!
+    fi
+    
+    # Store PID to close later
+    if [ ! -z "$splash_pid" ]; then
+        echo "$splash_pid" > /tmp/daemon-breathalyzer-installer-splash.pid
+        # Small delay to let window appear
+        sleep 0.5
+    fi
+}
+
+# Clean up splash image on exit
+cleanup_splash() {
+    if [ -f /tmp/daemon-breathalyzer-installer-splash.pid ]; then
+        local pid=$(cat /tmp/daemon-breathalyzer-installer-splash.pid 2>/dev/null)
+        if [ ! -z "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            kill "$pid" 2>/dev/null || true
+            # Wait a moment for the process to terminate
+            sleep 0.3
+        fi
+        rm -f /tmp/daemon-breathalyzer-installer-splash.pid 2>/dev/null || true
+    fi
+}
+
+# Set trap to cleanup on exit
+trap cleanup_splash EXIT
+
+# Show splash image
+show_splash_image
+
 echo "=========================================="
 echo "Daemon Breathalyzer - Installation"
 echo "see https://github.com/deanwheatley/Daemon-Breathalyzer"
@@ -432,6 +505,9 @@ Keywords=asus;fan;temperature;cooling;laptop;control;
 EOF
 
 chmod +x "$DESKTOP_FILE"
+
+# Clean up splash image before completion message
+cleanup_splash
 
 echo "=========================================="
 echo "✅ Installation Complete!"

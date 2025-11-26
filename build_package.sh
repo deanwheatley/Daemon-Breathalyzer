@@ -51,6 +51,13 @@ cp "$SCRIPT_DIR/fix_system_log_errors.sh" "$PACKAGE_DIR/"
 echo "🖼️  Copying images..."
 mkdir -p "$PACKAGE_DIR/img"
 cp -r "$SCRIPT_DIR/img"/* "$PACKAGE_DIR/img/" 2>/dev/null || true
+# Also copy any splash images in root if they exist
+if [ -f "$SCRIPT_DIR/installer_splash.png" ]; then
+    cp "$SCRIPT_DIR/installer_splash.png" "$PACKAGE_DIR/img/" 2>/dev/null || true
+fi
+if [ -f "$SCRIPT_DIR/splash.png" ]; then
+    cp "$SCRIPT_DIR/splash.png" "$PACKAGE_DIR/img/" 2>/dev/null || true
+fi
 
 # Copy essential documentation
 echo "📚 Copying documentation..."
