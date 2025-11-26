@@ -2,12 +2,13 @@
 #
 # Usage:
 #   make package        - Build distribution package
+#   make bin-package    - Build install package in bin/ folder
 #   make clean          - Clean build artifacts
 #   make install        - Install the application
 #   make test           - Run tests
 #   make update-package - Update package folder (keeps it in sync)
 
-.PHONY: package clean install test update-package help
+.PHONY: package bin-package clean install test update-package help
 
 # Default target
 help:
@@ -15,6 +16,7 @@ help:
 	@echo ""
 	@echo "Available targets:"
 	@echo "  make package        - Build distribution package in package/ folder"
+	@echo "  make bin-package    - Build install package in bin/ folder (compressed archive)"
 	@echo "  make update-package - Update package folder (sync with current code)"
 	@echo "  make clean          - Clean build artifacts and package folder"
 	@echo "  make install        - Run installation script"
@@ -27,6 +29,11 @@ package:
 	@echo "Building distribution package..."
 	@./build_package.sh
 
+# Build install package in bin/ folder
+bin-package: package
+	@echo "Building install package in bin/ folder..."
+	@./build_bin_package.sh
+
 # Update package folder - keeps package/ in sync with current code
 # This is the rule that should be run whenever the app changes
 update-package: package
@@ -37,6 +44,7 @@ update-package: package
 clean:
 	@echo "Cleaning build artifacts..."
 	@rm -rf package/*
+	@rm -rf bin/*
 	@rm -rf build/
 	@rm -rf dist/
 	@rm -rf *.egg-info/

@@ -55,5 +55,9 @@ Thumbs.db
 
 # Package directory (generated, but can be distributed)
 package/
+
+# Install packages - exclude archives but keep scripts and README
+bin/*.tar.gz
+bin/*.tar.gz.sha256
 *.tar.gz
 *.zip
