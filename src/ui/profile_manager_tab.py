@@ -362,7 +362,7 @@ class ProfileManagerTab(QWidget):
             QMessageBox.information(
                 self,
                 "Loaded",
-                f"Profile '{profile_name}' loaded. Switch to Fan Curves tab to view and apply."
+                f"Profile '{profile_name}' loaded. Switch to Fan Curve Designer tab to view and edit."
             )
         else:
             QMessageBox.warning(self, "Error", f"Failed to load profile '{profile_name}'.")

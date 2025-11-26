@@ -101,7 +101,7 @@ class HelpTab(QWidget):
         <p>The application has several tabs:</p>
         <ul>
             <li><strong>Dashboard:</strong> View real-time system metrics and graphs</li>
-            <li><strong>Fan Curves:</strong> Edit and apply fan curve configurations</li>
+            <li><strong>Fan Curve Designer:</strong> Design, load, and save fan curve configurations</li>
             <li><strong>Fan Status:</strong> Visual representation of fan curves and current status</li>
             <li><strong>Test Fans:</strong> Manually test and control individual fans</li>
             <li><strong>System Logs:</strong> View and filter system logs</li>
@@ -164,40 +164,57 @@ class HelpTab(QWidget):
     def _create_fan_curves_help_tab(self) -> QWidget:
         """Create fan curves help content."""
         content = """
-        <h2 style="color: #00BCD4;">Fan Curves - Configuration Editor</h2>
+        <h2 style="color: #00BCD4;">Fan Curve Designer</h2>
         
         <h3>🌡️ What is a Fan Curve?</h3>
         <p>A fan curve defines how fast your laptop fans should spin at different temperatures. 
         The graph shows temperature (X-axis) vs fan speed percentage (Y-axis).</p>
         
-        <h3>🎛️ Using the Editor</h3>
+        <h3>🎨 Designer Workflow</h3>
+        <p>The Fan Curve Designer is focused on <strong>designing, loading, and saving</strong> fan curves. 
+        To apply designed curves to your system, use a different screen (coming soon).</p>
+        
+        <h3>🎛️ Using the Designer</h3>
         
         <h4>1. Selecting a Fan</h4>
-        <p>Use the buttons at the top to select which fan you want to configure:</p>
+        <p>Use the buttons at the top to select which fan you want to design for:</p>
         <ul>
             <li><strong>CPU Fan:</strong> Controls the CPU cooling fan</li>
             <li><strong>GPU Fan:</strong> Controls the graphics card fan</li>
         </ul>
         
-        <h4>2. Editing Points</h4>
+        <h4>2. Loading Curves</h4>
+        <p><strong>Load Presets:</strong> Click "Quiet", "Balanced", or "Performance" buttons to load preset curves</p>
+        <p><strong>Load Saved Profile:</strong> Select a profile from the "Saved Profile" dropdown to load a previously saved curve</p>
+        <p><strong>Reset:</strong> Click "Reset to Original" to restore the curve to when it was first loaded</p>
+        
+        <h4>3. Editing Points</h4>
         <p><strong>To select a point:</strong> Click on any control point (blue circles) on the graph</p>
         <p><strong>To add a new point:</strong> Enter temperature and fan speed values, then click "Add Point"</p>
         <p><strong>To update a point:</strong> Select it, change values, then click "Update Selected"</p>
         <p><strong>To remove a point:</strong> Select it and click "Remove Selected" (must have at least 2 points)</p>
         
-        <h3>🎯 Preset Curves</h3>
-        <p>Quick apply buttons for common configurations:</p>
+        <h3>💾 Saving Curves</h3>
+        <p><strong>Save Curve:</strong> Saves to the currently loaded profile (if one is loaded)</p>
+        <p><strong>Save As:</strong> Always prompts for a new profile name to save your curve</p>
+        
+        <h3>🔒 Active Curve Protection</h3>
+        <p>If you try to save over a curve that is currently applied to your system, you'll be prompted to:</p>
         <ul>
-            <li><strong>Balanced:</strong> Balanced cooling and noise (default)</li>
-            <li><strong>Loudmouth:</strong> Maximum fan speed at low temperatures</li>
-            <li><strong>Shush:</strong> Very quiet, low fan speeds</li>
+            <li><strong>Save As:</strong> Save with a new name (recommended)</li>
+            <li><strong>Discard:</strong> Discard your changes and restore the original curve</li>
+            <li><strong>Cancel:</strong> Cancel the save operation</li>
         </ul>
+        <p>This prevents accidentally modifying curves that are currently in use.</p>
         
-        <h3>✅ Applying Changes</h3>
-        <p>Click the "Apply" button to save and apply your fan curve configuration. The curve will persist across reboots.</p>
-        
-        <h3>🧪 Testing Fans</h3>
-        <p>Use the "Test Fan" button to temporarily set fan speed to 100% for 5 seconds to verify fan operation.</p>
+        <h3>📐 Curve Validation</h3>
+        <p>The designer automatically validates your curves:</p>
+        <ul>
+            <li>Fan speeds must increase as temperature increases (monotonic)</li>
+            <li>You must have at least 2 points in the curve</li>
+            <li>Temperature range: 30-90°C</li>
+            <li>Fan speed range: 0-100%</li>
+        </ul>
         """
         return self._create_scrollable_content(content)
     

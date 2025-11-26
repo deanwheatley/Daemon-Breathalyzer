@@ -136,7 +136,7 @@ class HelpDialog(QDialog):
         <p>The application has four main tabs:</p>
         <ul>
             <li><strong>Dashboard:</strong> View real-time system metrics and graphs</li>
-            <li><strong>Fan Curves:</strong> Edit and apply fan curve configurations</li>
+            <li><strong>Fan Curve Designer:</strong> Design, load, and save fan curve configurations</li>
             <li><strong>Profiles:</strong> Save and manage your fan curve profiles</li>
             <li><strong>Settings:</strong> Application preferences (coming soon)</li>
         </ul>
@@ -212,22 +212,31 @@ class HelpDialog(QDialog):
     def _create_fan_curves_help_tab(self) -> QWidget:
         """Create fan curves help content."""
         content = """
-        <h2>Fan Curves - Configuration Editor</h2>
+        <h2>Fan Curve Designer</h2>
         
         <h3>🌡️ What is a Fan Curve?</h3>
         <p>A fan curve defines how fast your laptop fans should spin at different temperatures. 
         The graph shows temperature (X-axis) vs fan speed percentage (Y-axis).</p>
         
-        <h3>🎛️ Using the Editor</h3>
+        <h3>🎨 Designer Workflow</h3>
+        <p>The Fan Curve Designer is focused on <strong>designing, loading, and saving</strong> fan curves. 
+        To apply designed curves to your system, use a different screen (coming soon).</p>
+        
+        <h3>🎛️ Using the Designer</h3>
         
         <h4>1. Selecting a Fan</h4>
-        <p>Use the buttons at the top to select which fan you want to configure:</p>
+        <p>Use the buttons at the top to select which fan you want to design for:</p>
         <ul>
             <li><strong>CPU Fan:</strong> Controls the CPU cooling fan</li>
             <li><strong>GPU Fan:</strong> Controls the graphics card fan</li>
         </ul>
         
-        <h4>2. Editing Points</h4>
+        <h4>2. Loading Curves</h4>
+        <p><strong>Load Presets:</strong> Click "Quiet", "Balanced", or "Performance" buttons to load preset curves</p>
+        <p><strong>Load Saved Profile:</strong> Select a profile from the "Saved Profile" dropdown to load a previously saved curve</p>
+        <p><strong>Reset:</strong> Click "Reset to Original" to restore the curve to when it was first loaded</p>
+        
+        <h4>3. Editing Points</h4>
         <p><strong>To select a point:</strong></p>
         <ul>
             <li>Click on any control point (blue circles) on the graph</li>
@@ -255,35 +264,21 @@ class HelpDialog(QDialog):
             <li>Note: You must have at least 2 points in the curve</li>
         </ol>
         
-        <h3>🎯 Preset Curves</h3>
-        <p>Quick apply buttons for common configurations:</p>
+        <h3>💾 Saving Curves</h3>
+        <p><strong>Save Curve:</strong> Saves to the currently loaded profile (if one is loaded). If no profile is loaded, prompts for "Save As".</p>
+        <p><strong>Save As:</strong> Always prompts for a new profile name to save your curve with.</p>
+        
+        <h3>🔒 Active Curve Protection</h3>
+        <p>If you try to save over a curve that is currently applied to your system, you'll be prompted to:</p>
         <ul>
-            <li><strong>Quiet Preset:</strong> Lower fan speeds for quiet operation (20-70%)</li>
-            <li><strong>Balanced Preset:</strong> Balanced cooling and noise (30-85%)</li>
-            <li><strong>Performance Preset:</strong> Aggressive cooling for maximum performance (40-100%)</li>
+            <li><strong>Save As:</strong> Save with a new name (recommended)</li>
+            <li><strong>Discard:</strong> Discard your changes and restore the original curve</li>
+            <li><strong>Cancel:</strong> Cancel the save operation</li>
         </ul>
-        
-        <h3>✅ Applying Changes</h3>
-        <ol>
-            <li>Configure your fan curve using the editor</li>
-            <li>Click "Apply" button</li>
-            <li>The curve will be sent to your ASUS laptop via asusctl</li>
-            <li>A confirmation message will appear when successful</li>
-        </ol>
-        
-        <h3>🔄 Resetting Changes</h3>
-        <p>Click "Reset" to restore the original curve (before your edits).</p>
-        
-        <h3>⚠️ Requirements</h3>
-        <p><strong>Fan curve editing requires:</strong></p>
-        <ul>
-            <li>asusctl installed and running</li>
-            <li>asusd service enabled: <code>sudo systemctl enable --now asusd</code></li>
-        </ul>
-        <p>If asusctl is not available, you'll see a warning message. Check Help → Check Dependencies for installation instructions.</p>
+        <p>This prevents accidentally modifying curves that are currently in use.</p>
         
         <h3>📐 Curve Validation</h3>
-        <p>The editor automatically validates your curves:</p>
+        <p>The designer automatically validates your curves:</p>
         <ul>
             <li>Fan speeds must increase as temperature increases (monotonic)</li>
             <li>You must have at least 2 points in the curve</li>
@@ -304,37 +299,30 @@ class HelpDialog(QDialog):
         
         <h3>💾 Saving Profiles</h3>
         <ol>
-            <li>Go to the <strong>Fan Curves</strong> tab</li>
-            <li>Configure your desired fan curves</li>
-            <li>Click "Apply" to apply them</li>
-            <li>Switch to the <strong>Profiles</strong> tab</li>
-            <li>Click "Save Current Curves" button</li>
-            <li>Enter a name and optional description</li>
+            <li>Go to the <strong>Fan Curve Designer</strong> tab</li>
+            <li>Design your desired fan curves</li>
+            <li>Click "Save Curve" or "Save As" to save your design</li>
+            <li>Enter a profile name and optional description</li>
             <li>Click "OK" to save</li>
         </ol>
+        <p><strong>Note:</strong> You can also save directly in the Fan Curve Designer using the Save buttons.</p>
         
         <h3>📂 Loading Profiles</h3>
-        <p><strong>Method 1: Double-Click</strong></p>
+        <p><strong>Method 1: From Fan Curve Designer</strong></p>
         <ul>
-            <li>Double-click any profile in the list</li>
-            <li>The profile will be loaded into the Fan Curves editor</li>
-            <li>You'll be automatically switched to the Fan Curves tab</li>
+            <li>Go to the Fan Curve Designer tab</li>
+            <li>Select a profile from the "Saved Profile" dropdown</li>
+            <li>The curve will be loaded into the designer</li>
         </ul>
         
-        <p><strong>Method 2: Select and Load</strong></p>
-        <ol>
-            <li>Click on a profile in the list to select it</li>
-            <li>Click the "Load" button</li>
-            <li>The profile will be loaded into the editor</li>
-        </ol>
+        <p><strong>Method 2: From Profile Manager</strong></p>
+        <ul>
+            <li>Double-click any profile in the list, or</li>
+            <li>Select a profile and click "Load"</li>
+            <li>The profile will be loaded into the Fan Curve Designer</li>
+        </ul>
         
-        <p><strong>Note:</strong> Loading a profile doesn't automatically apply it. You need to:</p>
-        <ol>
-            <li>Load the profile (see above)</li>
-            <li>Go to Fan Curves tab</li>
-            <li>Review the curves</li>
-            <li>Click "Apply" to apply them to your laptop</li>
-        </ol>
+        <p><strong>Note:</strong> Loading a profile loads it into the designer. To apply it to your system, use a different screen (coming soon).</p>
         
         <h3>🗑️ Deleting Profiles</h3>
         <ol>
