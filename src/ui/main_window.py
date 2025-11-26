@@ -356,22 +356,6 @@ class MainWindow(QMainWindow):
         
         return widget
     
-    def _on_fan_curve_changed(self, curve):
-        """Handle fan curve changes."""
-        # Get current profile
-        current_profile = self.asusctl.get_current_profile() or Profile.BALANCED
-        
-        # Determine which fan to apply to (simplified - could be improved)
-        fan_name = "CPU"  # Could be determined from UI selection
-        
-        # Apply the curve
-        success, message = self.asusctl.set_fan_curve(current_profile, fan_name, curve)
-        
-        if success:
-            self.statusBar().showMessage(f"Fan curve applied for {fan_name}", 3000)
-        else:
-            QMessageBox.warning(self, "Error", f"Failed to apply fan curve:\n{message}")
-    
     def _create_log_viewer_tab(self) -> QWidget:
         """Create the log viewer tab."""
         from .log_viewer_tab import LogViewerTab
