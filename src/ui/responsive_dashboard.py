@@ -221,12 +221,22 @@ class ResponsiveDashboard(QWidget):
             cb.setStyleSheet(f"""
                 QCheckBox {{
                     color: {GAME_COLORS['text_primary']};
-                    font-size: 12px;
-                    padding: 5px;
+                    font-size: 14px;
+                    font-weight: bold;
+                    padding: 8px;
+                    background-color: {GAME_COLORS['bg_card']};
+                    border-radius: 4px;
+                    margin: 2px;
                 }}
                 QCheckBox::indicator {{
-                    width: 20px;
-                    height: 20px;
+                    width: 24px;
+                    height: 24px;
+                    border: 2px solid {GAME_COLORS['border']};
+                    border-radius: 4px;
+                    background-color: {GAME_COLORS['bg_medium']};
+                }}
+                QCheckBox::indicator:checked {{
+                    background-color: {GAME_COLORS['accent_blue']};
                 }}
             """)
             checkboxes[widget_name] = cb

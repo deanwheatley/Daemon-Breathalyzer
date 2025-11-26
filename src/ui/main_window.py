@@ -20,7 +20,6 @@ from .fan_speed_gauge import FanSpeedGauge
 from .dependency_dialog import DependencyDialog
 from .fan_curve_editor import FanCurveEditor
 from .profile_manager_tab import ProfileManagerTab
-from .help_dialog import HelpDialog
 from .about_tab import AboutTab
 from ..control.asusctl_interface import AsusctlInterface, Profile
 from ..control.profile_manager import ProfileManager
@@ -55,11 +54,7 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         
-        # Create header bar with icon in top right
-        header_bar = self._create_header_bar()
-        main_layout.addWidget(header_bar)
-        
-        # Create tab widget with game-style theming
+        # Create tab widget with game-style theming (no header bar - removed dead whitespace)
         self.tabs = QTabWidget()
         from .game_style_theme import GAME_STYLES
         self.tabs.setStyleSheet(GAME_STYLES['tab_widget'])
@@ -98,12 +93,14 @@ class MainWindow(QMainWindow):
         self.test_fans_tab = self._create_test_fans_tab()
         self.tabs.addTab(self.test_fans_tab, "Test Fans")
         
+        # Create help tab
+        from .help_tab import HelpTab
+        self.help_tab = HelpTab(self)
+        self.tabs.addTab(self.help_tab, "Help")
+        
         # Create about tab
         self.about_tab = AboutTab(self)
         self.tabs.addTab(self.about_tab, "About")
-        
-        # Create placeholder tabs
-        self.tabs.addTab(QWidget(), "Settings")
         
         # Status bar with modern styling
         self.statusBar().setStyleSheet("""
@@ -178,10 +175,6 @@ class MainWindow(QMainWindow):
         # Could restart monitoring or check for newly available features
         pass
     
-    def _show_help(self):
-        """Show help documentation dialog."""
-        dialog = HelpDialog(self)
-        dialog.exec()
     
     def _show_about(self):
         """Show about dialog."""

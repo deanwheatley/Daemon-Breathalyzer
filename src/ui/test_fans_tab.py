@@ -61,10 +61,17 @@ class FanTestTile(QGroupBox):
                 font-weight: bold;
                 font-size: 14px;
                 color: {GAME_COLORS['text_primary']};
+                padding: 5px;
             }}
             QCheckBox::indicator {{
                 width: 40px;
                 height: 20px;
+                border: 2px solid {GAME_COLORS['border']};
+                border-radius: 10px;
+                background-color: {GAME_COLORS['bg_medium']};
+            }}
+            QCheckBox::indicator:checked {{
+                background-color: {GAME_COLORS['accent_green']};
             }}
         """)
         self.test_mode_checkbox.stateChanged.connect(self._on_test_mode_changed)
@@ -75,29 +82,31 @@ class FanTestTile(QGroupBox):
         # Timer display
         timer_layout = QHBoxLayout()
         timer_label = QLabel("Time Remaining:")
-        timer_label.setStyleSheet(f"font-weight: bold; color: {GAME_COLORS['text_primary']};")
+        timer_label.setStyleSheet(f"font-weight: bold; font-size: 13px; color: {GAME_COLORS['text_secondary']};")
         self.timer_display = QLabel("--:--")
-        self.timer_display.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {GAME_COLORS['accent_red']};")
+        self.timer_display.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {GAME_COLORS['accent_red']};")
         timer_layout.addWidget(timer_label)
         timer_layout.addWidget(self.timer_display)
         timer_layout.addStretch()
         layout.addLayout(timer_layout)
         
-        # Current RPM display
+        # Current RPM display - make it more prominent
         rpm_layout = QHBoxLayout()
         rpm_label = QLabel("Current RPM:")
-        rpm_label.setStyleSheet(f"font-weight: bold; color: {GAME_COLORS['text_primary']};")
+        rpm_label.setStyleSheet(f"font-weight: bold; font-size: 13px; color: {GAME_COLORS['text_secondary']};")
         self.rpm_display = QLabel("N/A")
-        self.rpm_display.setStyleSheet(f"font-size: 14px; color: {GAME_COLORS['accent_blue']};")
+        self.rpm_display.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {GAME_COLORS['accent_blue']}; background-color: {GAME_COLORS['bg_medium']}; padding: 5px 10px; border-radius: 5px;")
+        self.rpm_display.setMinimumWidth(100)
+        self.rpm_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
         rpm_layout.addWidget(rpm_label)
         rpm_layout.addWidget(self.rpm_display)
         rpm_layout.addStretch()
         layout.addLayout(rpm_layout)
         
-        # Fan speed slider
+        # Fan speed slider - make it more readable
         slider_layout = QVBoxLayout()
         slider_label = QLabel("Fan Speed:")
-        slider_label.setStyleSheet(f"font-weight: bold; color: {GAME_COLORS['text_primary']};")
+        slider_label.setStyleSheet(f"font-weight: bold; font-size: 13px; color: {GAME_COLORS['text_secondary']};")
         slider_layout.addWidget(slider_label)
         
         slider_row = QHBoxLayout()
@@ -108,8 +117,9 @@ class FanTestTile(QGroupBox):
         self.speed_slider.valueChanged.connect(self._on_slider_changed)
         
         self.speed_label = QLabel("0%")
-        self.speed_label.setMinimumWidth(50)
-        self.speed_label.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {GAME_COLORS['accent_orange']};")
+        self.speed_label.setMinimumWidth(70)
+        self.speed_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.speed_label.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {GAME_COLORS['accent_orange']}; background-color: {GAME_COLORS['bg_medium']}; padding: 5px 10px; border-radius: 5px;")
         
         slider_row.addWidget(self.speed_slider)
         slider_row.addWidget(self.speed_label)
@@ -128,18 +138,26 @@ class FanTestTile(QGroupBox):
         self.setStyleSheet(f"""
             QGroupBox {{
                 font-weight: bold;
+                font-size: 16px;
                 border: 2px solid {border_color};
                 border-radius: 8px;
                 margin-top: 10px;
-                padding-top: 15px;
+                padding-top: 20px;
+                padding-bottom: 15px;
+                padding-left: 15px;
+                padding-right: 15px;
                 background-color: {bg_card};
                 color: {text_primary};
             }}
             QGroupBox::title {{
                 subcontrol-origin: margin;
                 left: 10px;
-                padding: 0 5px;
+                padding: 0 8px;
                 color: {accent_blue};
+                font-size: 16px;
+            }}
+            QLabel {{
+                color: {text_primary};
             }}
             QSlider::groove:horizontal {{
                 border: 1px solid {border_color};
