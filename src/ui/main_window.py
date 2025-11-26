@@ -72,7 +72,7 @@ class MainWindow(QMainWindow):
         
         # Create fan curve editor tab
         self.fan_curve_tab = self._create_fan_curve_tab()
-        self.tabs.addTab(self.fan_curve_tab, "Fan Curves")
+        self.tabs.addTab(self.fan_curve_tab, "Fan Curve Designer")
         
         # Profile manager (no separate tab - profiles accessed via dropdown in fan curve editor)
         self.profile_manager = ProfileManager()
