@@ -71,10 +71,10 @@
   - **Balanced**: Balanced cooling and noise (30-85%)
   - **Performance**: Aggressive cooling (40-100%)
 
-### 4. Fan Curve Editor
+### 4. Fan Curve Designer
 **Location:** `src/ui/fan_curve_editor.py`
 
-- **Interactive Graph Editor**
+- **Interactive Graph Designer**
   - Visual curve display with smooth interpolation
   - Clickable control points
   - Temperature vs Fan Speed visualization
@@ -86,15 +86,16 @@
   - Update existing points
   - Visual point selection
 
-- **Preset Loading**
-  - One-click preset application
-  - Quiet, Balanced, Performance presets
+- **Load Curves**
+  - Load preset curves (Quiet, Balanced, Performance)
+  - Load saved profiles from dropdown
   - Reset to original curve
 
-- **Apply Functionality**
-  - Apply curves to asusctl
-  - Integration with main window
-  - Success/failure feedback
+- **Save Functionality**
+  - Save curves to profiles
+  - Save As for new profile names
+  - Active curve protection (prevents overwriting active curves)
+  - Profile tracking and management
 
 ### 5. Modern UI Design
 **Location:** `src/ui/main_window.py`, All UI components
@@ -107,9 +108,11 @@
 
 - **Tabbed Interface**
   - Dashboard tab (monitoring)
-  - Fan Curves tab (editor)
-  - Profiles tab (placeholder)
-  - Settings tab (placeholder)
+  - Fan Curve Designer tab (design, load, save curves)
+  - Fan Status tab (visual status and monitoring)
+  - Test Fans tab (manual fan testing)
+  - System Logs tab (log viewing)
+  - History tab (historical data)
 
 - **User Experience**
   - Intuitive navigation

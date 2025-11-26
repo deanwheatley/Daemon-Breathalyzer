@@ -7,12 +7,12 @@ A modern, minimalist GUI application for Linux Mint that allows easy fan curve c
 - **🔍 Automatic Dependency Management**: The app checks for all required dependencies on startup and provides step-by-step installation instructions
 - **📊 Live System Monitoring**: Real-time CPU, GPU, memory usage, temperatures, and fan speeds
 - **📈 Real-time Graphs**: Historical data visualization with beautiful charts
-- **🌡️ Fan Curve Editor**: Interactive graph-based fan curve configuration with presets
+- **🌡️ Fan Curve Designer**: Design, load, and save fan curve configurations with presets
 - **⚙️ asusctl Integration**: Seamless integration with ASUS laptop control
 - **📋 System Log Monitoring**: Real-time log viewing with journalctl integration, filtering, search, and error tracking
 - **🎯 Error Tracking**: Automatic error detection and summary statistics with color-coded priority levels
 - **🎨 Modern Minimalist UI**: Clean, informative, and simple to use
-- **📦 Preset Curves**: Quick apply Quiet, Balanced, or Performance fan curves
+- **📦 Preset Curves**: Load Quiet, Balanced, or Performance fan curve presets
 - **🚀 Standalone Application**: Install once, launch from application menu - no terminal needed!
 
 ## 🎨 Modern & Minimalist Design
@@ -99,7 +99,7 @@ The application includes comprehensive help documentation accessible from within
 - **Topics Covered:**
   - Getting Started guide
   - Dashboard usage and metrics explanation
-  - Fan Curve Editor tutorial
+  - Fan Curve Designer tutorial
   - Profile Management guide
   - Troubleshooting common issues
 
