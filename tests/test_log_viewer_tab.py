@@ -238,7 +238,7 @@ class TestLogViewerTab:
         text = viewer.log_display.toPlainText()
         assert 'Error 1' in text or 'Info 1' in text
     
-    @patch('src.monitoring.log_monitor.LogMonitor')
+    @patch('src.ui.log_viewer_tab.LogMonitor')
     def test_update_error_summary(self, mock_monitor_class, qapp):
         """Test updating error summary."""
         mock_monitor = Mock()
@@ -248,9 +248,12 @@ class TestLogViewerTab:
             'recent_errors_1h': 5,
             'warnings': 3
         }
+        mock_monitor.on_new_entry = None
+        mock_monitor.on_error = None
         mock_monitor_class.return_value = mock_monitor
         
         viewer = LogViewerTab()
+        viewer.log_monitor = mock_monitor  # Replace with mock
         
         viewer._update_error_summary()
         
@@ -260,28 +263,50 @@ class TestLogViewerTab:
         assert '2' in text   # Critical
         assert '5' in text   # Errors
     
-    @patch('src.monitoring.log_monitor.LogMonitor')
+    @patch('src.ui.log_viewer_tab.LogMonitor')
     def test_refresh_source_list(self, mock_monitor_class, qapp):
         """Test refreshing source list."""
         mock_monitor = Mock()
-        mock_monitor.get_available_sources.return_value = ['service1', 'service2']
+        mock_monitor.get_available_sources.return_value = ['service1', 'service2', 'CRON']
+        mock_monitor.get_error_summary.return_value = {
+            'total_errors': 0,
+            'recent_critical_1h': 0,
+            'recent_errors_1h': 0,
+            'warnings': 0
+        }
+        mock_monitor.on_new_entry = None
+        mock_monitor.on_error = None
         mock_monitor_class.return_value = mock_monitor
         
         viewer = LogViewerTab()
+        viewer.log_monitor = mock_monitor  # Replace with mock
         
         viewer.refresh_source_list()
         
-        # Check that sources were added to combo
+        # Check that sources were added to combo (first item is "All sources")
         assert viewer.source_combo.count() > 1
-        assert viewer.source_combo.itemText(1) in ['service1', 'service2']
+        # Check that our mocked sources are in the combo
+        combo_items = [viewer.source_combo.itemText(i) for i in range(viewer.source_combo.count())]
+        assert 'service1' in combo_items
+        assert 'service2' in combo_items
+        assert 'CRON' in combo_items
     
-    @patch('src.monitoring.log_monitor.LogMonitor')
+    @patch('src.ui.log_viewer_tab.LogMonitor')
     def test_close_event(self, mock_monitor_class, qapp):
         """Test cleanup on close."""
         mock_monitor = Mock()
+        mock_monitor.get_error_summary.return_value = {
+            'total_errors': 0,
+            'recent_critical_1h': 0,
+            'recent_errors_1h': 0,
+            'warnings': 0
+        }
+        mock_monitor.on_new_entry = None
+        mock_monitor.on_error = None
         mock_monitor_class.return_value = mock_monitor
         
         viewer = LogViewerTab()
+        viewer.log_monitor = mock_monitor  # Replace with mock
         
         from PyQt6.QtGui import QCloseEvent
         event = QCloseEvent()
