@@ -2,6 +2,50 @@
 
 ## Recent Updates (Latest Session)
 
+### ✅ Fan Curve Designer Redesign
+
+#### Major UI/UX Overhaul
+- ✅ Redesigned "Fan Curves" tab as dedicated "Fan Curve Designer"
+- ✅ Removed "Apply" functionality (moved to separate screen - coming soon)
+- ✅ Removed "Test Fan" functionality from designer
+- ✅ Focused workflow: Design → Load → Save only
+- ✅ Modern, intuitive UI with grouped Load/Save sections
+
+#### Active Curve Protection
+- ✅ Prevents saving over currently active (applied) curves
+- ✅ Intelligent detection of active curves across all profiles
+- ✅ User prompts: "Save As", "Discard", or "Cancel"
+- ✅ Protects users from accidentally modifying curves in use
+
+#### Enhanced Save Functionality
+- ✅ "Save Curve" button for quick saves to loaded profile
+- ✅ "Save As" button for creating new profiles
+- ✅ Profile tracking - remembers currently loaded profile
+- ✅ Automatic profile dropdown refresh after saves
+
+#### Code Cleanup
+- ✅ Removed 369 lines of unused code (Apply/Test functionality)
+- ✅ Added 297 lines of focused, clean code
+- ✅ Fixed all broken signal connections
+- ✅ Removed orphaned methods and references
+
+#### Documentation Updates
+- ✅ Updated README.md and FEATURES.md
+- ✅ Updated in-app help (help_tab.py, help_dialog.py)
+- ✅ Updated profile manager messages
+- ✅ All references to "Fan Curve Editor" changed to "Fan Curve Designer"
+
+**Files Modified:**
+- `src/ui/fan_curve_editor.py` - Complete redesign
+- `src/ui/main_window.py` - Tab renamed, signal connections fixed
+- `src/ui/help_tab.py` - Help content updated
+- `src/ui/help_dialog.py` - Help content updated
+- `src/ui/profile_manager_tab.py` - Messages updated
+- `README.md` - Documentation updated
+- `FEATURES.md` - Documentation updated
+
+## Previous Updates
+
 ### ✅ All UI/UX Issues Fixed
 
 #### 1. Fan Curve Visualization
