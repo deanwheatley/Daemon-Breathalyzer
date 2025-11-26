@@ -60,8 +60,8 @@ class FanStatusWidget(QWidget):
         content_layout.addWidget(metrics_group, 1)
         
         # Right side: Visual curve representation
-        curve_widget = self._create_curve_widget()
-        content_layout.addWidget(curve_widget, 2)
+        self.curve_widget = self._create_curve_widget()
+        content_layout.addWidget(self.curve_widget, 2)
         
         layout.addLayout(content_layout)
         
@@ -118,7 +118,14 @@ class FanStatusWidget(QWidget):
     
     def _create_curve_widget(self) -> QGroupBox:
         """Create the visual curve representation."""
-        group = QGroupBox("Fan Curve Visualization")
+        # Get current profile name for label
+        try:
+            current_profile = self.asusctl.get_current_profile() or Profile.BALANCED
+            profile_name = current_profile.value.capitalize()
+        except:
+            profile_name = "Balanced"
+        
+        group = QGroupBox(f"Fan Curve Visualization - {profile_name}")
         layout = QVBoxLayout(group)
         
         # Create PyQtGraph widget with game-style theme
@@ -149,8 +156,17 @@ class FanStatusWidget(QWidget):
         """Load the current fan curve for this fan."""
         try:
             current_profile = self.asusctl.get_current_profile() or Profile.BALANCED
-            curves = self.asusctl.get_fan_curves(current_profile)
-            self.current_curve = curves.get(self.fan_name)
+            
+            # First try loading from persistent storage (has applied curves)
+            from ..control.fan_curve_persistence import FanCurvePersistence
+            persistence = FanCurvePersistence()
+            saved_curves = persistence.load_active_curves(current_profile)
+            self.current_curve = saved_curves.get(self.fan_name)
+            
+            # Fall back to asusctl if not in persistent storage
+            if not self.current_curve:
+                curves = self.asusctl.get_fan_curves(current_profile)
+                self.current_curve = curves.get(self.fan_name)
             
             # If no curve found, use default Balanced curve
             if not self.current_curve:
@@ -395,16 +411,57 @@ class FanStatusWidget(QWidget):
         else:
             self.expected_value.setText("N/A")
         
-        # Reload curve if needed (profile might have changed)
+        # Reload curve if needed (check from persistent storage for applied curves)
         try:
             current_profile = self.asusctl.get_current_profile() or Profile.BALANCED
-            curves = self.asusctl.get_fan_curves(current_profile)
-            new_curve = curves.get(self.fan_name)
-            if new_curve != self.current_curve:
+            # Try loading from persistent storage first (this has the applied curves)
+            from ..control.fan_curve_persistence import FanCurvePersistence
+            persistence = FanCurvePersistence()
+            saved_curves = persistence.load_active_curves(current_profile)
+            new_curve = saved_curves.get(self.fan_name)
+            
+            # Fall back to asusctl if not in persistent storage
+            if not new_curve:
+                curves = self.asusctl.get_fan_curves(current_profile)
+                new_curve = curves.get(self.fan_name)
+            
+            # Use default if still no curve
+            if not new_curve:
+                from ..control.asusctl_interface import get_preset_curve
+                new_curve = get_preset_curve('balanced')
+            
+            # Check if curve changed (compare points, not object reference)
+            curve_changed = False
+            if self.current_curve and new_curve:
+                # Compare curve points
+                if len(self.current_curve.points) != len(new_curve.points):
+                    curve_changed = True
+                else:
+                    for p1, p2 in zip(self.current_curve.points, new_curve.points):
+                        if p1.temperature != p2.temperature or p1.fan_speed != p2.fan_speed:
+                            curve_changed = True
+                            break
+            elif (self.current_curve is None) != (new_curve is None):
+                curve_changed = True
+            
+            if curve_changed:
                 self.current_curve = new_curve
                 self._update_curve_plot()
-        except:
-            pass
+                # Update curve widget title with profile name
+                if hasattr(self, 'curve_widget'):
+                    self._update_curve_widget_title()
+        except Exception as e:
+            print(f"Error reloading curve for {self.fan_name}: {e}")
+    
+    def _update_curve_widget_title(self):
+        """Update the curve widget title with current profile name."""
+        if hasattr(self, 'curve_widget'):
+            try:
+                current_profile = self.asusctl.get_current_profile() or Profile.BALANCED
+                profile_name = current_profile.value.capitalize()
+                self.curve_widget.setTitle(f"Fan Curve Visualization - {profile_name}")
+            except:
+                self.curve_widget.setTitle("Fan Curve Visualization - Balanced")
         
         # Update horizontal line and intersection marker based on current fan speed
         self._update_current_position_marker()

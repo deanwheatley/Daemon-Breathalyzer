@@ -5,7 +5,7 @@ This directory contains ready-to-install packages for Daemon Breathalyzer.
 ## 📦 Available Packages
 
 ### Archive Package
-- **`daemon-breathalyzer-20251125.tar.gz`** - Complete distribution package (384K)
+- **`daemon-breathalyzer-20251125.tar.gz`** - Complete distribution package (788K)
   - Contains all source code, scripts, and documentation
   - Extract with: `tar -xzf daemon-breathalyzer-20251125.tar.gz`
   - Then run: `cd daemon-breathalyzer-20251125 && ./install.sh`
@@ -67,7 +67,7 @@ The archive contains:
 ## 📝 Version
 
 Package Version: 20251125
-Build Date: Tue Nov 25 08:03:47 PM PST 2025
+Build Date: Tue Nov 25 08:39:25 PM PST 2025
 
 ## 🆘 Support
 

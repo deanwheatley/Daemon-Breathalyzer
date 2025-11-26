@@ -406,13 +406,6 @@ class TestFansTab(QWidget):
         
         layout.addStretch()
         
-        # Styling
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #f5f5f5;
-            }
-        """)
-        
         # Detect and create tiles for available fans
         self._detect_fans()
     

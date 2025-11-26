@@ -93,11 +93,6 @@ class MainWindow(QMainWindow):
         self.test_fans_tab = self._create_test_fans_tab()
         self.tabs.addTab(self.test_fans_tab, "Test Fans")
         
-        # Create help tab
-        from .help_tab import HelpTab
-        self.help_tab = HelpTab(self)
-        self.tabs.addTab(self.help_tab, "Help")
-        
         # Create about tab
         self.about_tab = AboutTab(self)
         self.tabs.addTab(self.about_tab, "About")
