@@ -17,7 +17,7 @@ import numpy as np
 
 from ..control.asusctl_interface import FanCurve, FanCurvePoint, Profile, AsusctlInterface
 from ..control.profile_manager import ProfileManager, SavedProfile
-from ..control.profile_manager import ProfileManager, SavedProfile
+from .game_style_theme import GAME_COLORS, GAME_STYLES
 
 
 class DraggablePoint(pg.ScatterPlotItem):
@@ -37,12 +37,13 @@ class DraggablePoint(pg.ScatterPlotItem):
     
     def set_selected(self, selected):
         """Update selection state."""
+        from .game_style_theme import GAME_COLORS
         if selected:
-            self.setBrush(pg.mkBrush(color='#2196F3'))
-            self.setPen(pg.mkPen(color='#2196F3', width=2))
+            self.setBrush(pg.mkBrush(color=GAME_COLORS['accent_blue']))
+            self.setPen(pg.mkPen(color=GAME_COLORS['accent_blue'], width=2))
         else:
-            self.setBrush(pg.mkBrush(color='white'))
-            self.setPen(pg.mkPen(color='#2196F3', width=2))
+            self.setBrush(pg.mkBrush(color=GAME_COLORS['bg_card']))
+            self.setPen(pg.mkPen(color=GAME_COLORS['accent_blue'], width=2))
 
 
 class FanCurveEditor(QWidget):
@@ -70,6 +71,9 @@ class FanCurveEditor(QWidget):
         
     def setup_ui(self):
         """Set up the UI."""
+        # Apply game-style theme
+        self.setStyleSheet(GAME_STYLES['widget'])
+        
         layout = QVBoxLayout(self)
         layout.setSpacing(20)
         layout.setContentsMargins(30, 30, 30, 30)
@@ -82,9 +86,24 @@ class FanCurveEditor(QWidget):
         title_font.setPointSize(20)
         title_font.setWeight(QFont.Weight.DemiBold)
         title.setFont(title_font)
-        title.setStyleSheet("color: #212121;")
+        title.setStyleSheet(f"color: {GAME_COLORS['accent_blue']};")
         header_layout.addWidget(title)
         header_layout.addStretch()
+        
+        # Preset curves dropdown
+        preset_label = QLabel("Preset:")
+        preset_label.setStyleSheet("color: #666; margin-right: 8px;")
+        header_layout.addWidget(preset_label)
+        
+        self.preset_dropdown = QComboBox()
+        self.preset_dropdown.setMinimumWidth(150)
+        self.preset_dropdown.setStyleSheet(GAME_STYLES['combobox'])
+        self.preset_dropdown.addItems(["Balanced", "Loudmouth", "Shush"])
+        self.preset_dropdown.setCurrentText("Balanced")  # Default
+        self.preset_dropdown.currentTextChanged.connect(self.on_preset_changed)
+        header_layout.addWidget(self.preset_dropdown)
+        
+        header_layout.addSpacing(20)
         
         # Saved profiles dropdown
         profile_label = QLabel("Saved Profile:")
@@ -93,21 +112,7 @@ class FanCurveEditor(QWidget):
         
         self.profile_dropdown = QComboBox()
         self.profile_dropdown.setMinimumWidth(180)
-        self.profile_dropdown.setStyleSheet("""
-            QComboBox {
-                padding: 6px 12px;
-                border-radius: 6px;
-                border: 1px solid #e0e0e0;
-                background-color: white;
-            }
-            QComboBox:hover {
-                border: 1px solid #2196F3;
-            }
-            QComboBox::drop-down {
-                border: none;
-                width: 20px;
-            }
-        """)
+        self.profile_dropdown.setStyleSheet(GAME_STYLES['combobox'])
         self.profile_dropdown.addItem("-- Select Profile --")
         self.profile_dropdown.currentTextChanged.connect(self.on_profile_dropdown_changed)
         header_layout.addWidget(self.profile_dropdown)
@@ -121,18 +126,24 @@ class FanCurveEditor(QWidget):
         
         for btn in [self.cpu_fan_btn, self.gpu_fan_btn]:
             btn.setCheckable(True)
-            btn.setStyleSheet("""
-                QPushButton {
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {GAME_COLORS['bg_card']};
+                    color: {GAME_COLORS['text_primary']};
+                    border: 2px solid {GAME_COLORS['border']};
+                    border-radius: 8px;
                     padding: 8px 16px;
-                    border-radius: 6px;
-                    border: 1px solid #e0e0e0;
-                    background-color: white;
-                }
-                QPushButton:checked {
-                    background-color: #2196F3;
-                    color: white;
-                    border: 1px solid #2196F3;
-                }
+                    font-weight: bold;
+                }}
+                QPushButton:hover {{
+                    border: 2px solid {GAME_COLORS['accent_blue']};
+                }}
+                QPushButton:checked {{
+                    background-color: {GAME_COLORS['accent_blue']};
+                    color: {GAME_COLORS['text_primary']};
+                    border: 2px solid {GAME_COLORS['accent_blue']};
+                    box-shadow: 0 0 15px {GAME_COLORS['accent_blue']};
+                }}
             """)
             self.fan_button_group.addButton(btn)
         
@@ -150,30 +161,32 @@ class FanCurveEditor(QWidget):
         graph_layout = QVBoxLayout(graph_container)
         graph_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Create PyQtGraph widget
+        # Create PyQtGraph widget with game-style theme
         self.graph_widget = pg.PlotWidget()
-        self.graph_widget.setBackground('white')
-        self.graph_widget.setLabel('left', 'Fan Speed (%)', **{'color': '#666', 'font-size': '11pt'})
-        self.graph_widget.setLabel('bottom', 'Temperature (°C)', **{'color': '#666', 'font-size': '11pt'})
+        self.graph_widget.setBackground(pg.mkColor(GAME_COLORS['bg_card']))
+        self.graph_widget.setLabel('left', 'Fan Speed (%)', **{'color': GAME_COLORS['text_secondary'], 'font-size': '11pt'})
+        self.graph_widget.setLabel('bottom', 'Temperature (°C)', **{'color': GAME_COLORS['text_secondary'], 'font-size': '11pt'})
         self.graph_widget.setXRange(self.temp_range[0], self.temp_range[1])
         self.graph_widget.setYRange(self.speed_range[0], self.speed_range[1])
-        self.graph_widget.showGrid(x=True, y=True, alpha=0.2)
-        self.graph_widget.getAxis('left').setPen(pg.mkPen(color='#ccc', width=1))
-        self.graph_widget.getAxis('bottom').setPen(pg.mkPen(color='#ccc', width=1))
+        self.graph_widget.showGrid(x=True, y=True, alpha=0.1)
+        self.graph_widget.getAxis('left').setPen(pg.mkPen(color=GAME_COLORS['border'], width=1))
+        self.graph_widget.getAxis('bottom').setPen(pg.mkPen(color=GAME_COLORS['border'], width=1))
+        self.graph_widget.getAxis('left').setTextPen(pg.mkPen(color=GAME_COLORS['text_secondary']))
+        self.graph_widget.getAxis('bottom').setTextPen(pg.mkPen(color=GAME_COLORS['text_secondary']))
         
-        # Plot item for the curve
-        self.curve_plot = self.graph_widget.plot([], [], pen=pg.mkPen(color='#2196F3', width=3))
+        # Plot item for the curve with game-style color
+        self.curve_plot = self.graph_widget.plot([], [], pen=pg.mkPen(color=GAME_COLORS['accent_blue'], width=3))
         
         # Scene for interactive points
         self.plot_item = self.graph_widget.getPlotItem()
         
         graph_layout.addWidget(self.graph_widget)
-        graph_container.setStyleSheet("""
-            QWidget {
-                background-color: white;
-                border: 1px solid #e8e8e8;
+        graph_container.setStyleSheet(f"""
+            QWidget {{
+                background-color: {GAME_COLORS['bg_card']};
+                border: 2px solid {GAME_COLORS['border']};
                 border-radius: 12px;
-            }
+            }}
         """)
         graph_layout.setContentsMargins(15, 15, 15, 15)
         
@@ -204,27 +217,19 @@ class FanCurveEditor(QWidget):
             self.reset_btn, self.apply_btn
         ]
         
+        # Apply game-style theme to buttons
         for btn in preset_buttons:
-            btn.setStyleSheet("""
-                QPushButton {
-                    padding: 8px 16px;
-                    border-radius: 6px;
-                    font-weight: 500;
-                    font-size: 11pt;
-                }
-                QPushButton:hover {
-                    opacity: 0.9;
-                }
-            """)
+            btn.setStyleSheet(GAME_STYLES['button'])
         
-        self.preset_silent_btn.setStyleSheet(self.preset_silent_btn.styleSheet() + "background-color: #E0E0E0; color: #333;")
-        self.preset_quiet_btn.setStyleSheet(self.preset_quiet_btn.styleSheet() + "background-color: #9E9E9E; color: white;")
-        self.preset_balanced_btn.setStyleSheet(self.preset_balanced_btn.styleSheet() + "background-color: #4CAF50; color: white;")
-        self.preset_conservative_btn.setStyleSheet(self.preset_conservative_btn.styleSheet() + "background-color: #FF9800; color: white;")
-        self.preset_performance_btn.setStyleSheet(self.preset_performance_btn.styleSheet() + "background-color: #F44336; color: white;")
-        self.preset_max_btn.setStyleSheet(self.preset_max_btn.styleSheet() + "background-color: #9C27B0; color: white;")
-        self.reset_btn.setStyleSheet(self.reset_btn.styleSheet() + "background-color: #666; color: white;")
-        self.apply_btn.setStyleSheet(self.apply_btn.styleSheet() + "background-color: #2196F3; color: white;")
+        # Custom colors for preset buttons
+        self.preset_silent_btn.setStyleSheet(f"QPushButton {{ background-color: {GAME_COLORS['bg_card']}; color: {GAME_COLORS['text_secondary']}; border: 2px solid {GAME_COLORS['border']}; padding: 8px 16px; border-radius: 8px; font-weight: bold; }} QPushButton:hover {{ border: 2px solid {GAME_COLORS['accent_blue']}; }}")
+        self.preset_quiet_btn.setStyleSheet(f"QPushButton {{ background-color: {GAME_COLORS['bg_card']}; color: {GAME_COLORS['text_secondary']}; border: 2px solid {GAME_COLORS['border']}; padding: 8px 16px; border-radius: 8px; font-weight: bold; }} QPushButton:hover {{ border: 2px solid {GAME_COLORS['accent_blue']}; }}")
+        self.preset_balanced_btn.setStyleSheet(f"QPushButton {{ background-color: {GAME_COLORS['accent_green']}; color: {GAME_COLORS['text_primary']}; border: 2px solid {GAME_COLORS['accent_green']}; padding: 8px 16px; border-radius: 8px; font-weight: bold; }} QPushButton:hover {{ box-shadow: 0 0 15px {GAME_COLORS['accent_green']}; }}")
+        self.preset_conservative_btn.setStyleSheet(f"QPushButton {{ background-color: {GAME_COLORS['accent_orange']}; color: {GAME_COLORS['text_primary']}; border: 2px solid {GAME_COLORS['accent_orange']}; padding: 8px 16px; border-radius: 8px; font-weight: bold; }} QPushButton:hover {{ box-shadow: 0 0 15px {GAME_COLORS['accent_orange']}; }}")
+        self.preset_performance_btn.setStyleSheet(f"QPushButton {{ background-color: {GAME_COLORS['accent_red']}; color: {GAME_COLORS['text_primary']}; border: 2px solid {GAME_COLORS['accent_red']}; padding: 8px 16px; border-radius: 8px; font-weight: bold; }} QPushButton:hover {{ box-shadow: 0 0 15px {GAME_COLORS['accent_red']}; }}")
+        self.preset_max_btn.setStyleSheet(f"QPushButton {{ background-color: {GAME_COLORS['accent_purple']}; color: {GAME_COLORS['text_primary']}; border: 2px solid {GAME_COLORS['accent_purple']}; padding: 8px 16px; border-radius: 8px; font-weight: bold; }} QPushButton:hover {{ box-shadow: 0 0 15px {GAME_COLORS['accent_purple']}; }}")
+        self.reset_btn.setStyleSheet(f"QPushButton {{ background-color: {GAME_COLORS['bg_card']}; color: {GAME_COLORS['text_secondary']}; border: 2px solid {GAME_COLORS['border']}; padding: 8px 16px; border-radius: 8px; font-weight: bold; }} QPushButton:hover {{ border: 2px solid {GAME_COLORS['accent_blue']}; }}")
+        self.apply_btn.setStyleSheet(f"QPushButton {{ background-color: {GAME_COLORS['accent_blue']}; color: {GAME_COLORS['text_primary']}; border: 2px solid {GAME_COLORS['accent_blue']}; padding: 8px 16px; border-radius: 8px; font-weight: bold; }} QPushButton:hover {{ box-shadow: 0 0 15px {GAME_COLORS['accent_blue']}; }}")
         
         button_layout.addWidget(self.preset_silent_btn)
         button_layout.addWidget(self.preset_quiet_btn)
@@ -268,26 +273,16 @@ class FanCurveEditor(QWidget):
         self.save_profile_btn.clicked.connect(self.save_current_profile)
         button_layout.addWidget(self.save_profile_btn)
         
-        # Set up initial curve
+        # Set up initial curve - load Balanced preset
         self.load_preset('balanced')
+        self.preset_dropdown.blockSignals(True)
+        self.preset_dropdown.setCurrentText("Balanced")
+        self.preset_dropdown.blockSignals(False)
         
     def create_control_panel(self) -> QWidget:
         """Create the control panel widget."""
         panel = QGroupBox("Controls")
-        panel.setStyleSheet("""
-            QGroupBox {
-                font-weight: bold;
-                border: 1px solid #e8e8e8;
-                border-radius: 8px;
-                margin-top: 10px;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
-            }
-        """)
+        panel.setStyleSheet(GAME_STYLES['groupbox'])
         layout = QVBoxLayout(panel)
         
         # Add point controls
@@ -296,23 +291,34 @@ class FanCurveEditor(QWidget):
         self.temp_input = QSpinBox()
         self.temp_input.setRange(self.temp_range[0], self.temp_range[1])
         self.temp_input.setValue(50)
-        form_layout.addRow("Temperature (°C):", self.temp_input)
+        self.temp_input.setStyleSheet(GAME_STYLES['spinbox'])
+        temp_label = QLabel("Temperature (°C):")
+        temp_label.setStyleSheet(f"color: {GAME_COLORS['text_primary']};")
+        form_layout.addRow(temp_label, self.temp_input)
         
         self.speed_input = QSpinBox()
         self.speed_input.setRange(self.speed_range[0], self.speed_range[1])
         self.speed_input.setValue(50)
-        form_layout.addRow("Fan Speed (%):", self.speed_input)
+        self.speed_input.setStyleSheet(GAME_STYLES['spinbox'])
+        speed_label = QLabel("Fan Speed (%):")
+        speed_label.setStyleSheet(f"color: {GAME_COLORS['text_primary']};")
+        form_layout.addRow(speed_label, self.speed_input)
         
         layout.addLayout(form_layout)
         
         add_point_btn = QPushButton("Add Point")
-        add_point_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
+        add_point_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {GAME_COLORS['accent_green']};
+                color: {GAME_COLORS['text_primary']};
+                border: 2px solid {GAME_COLORS['accent_green']};
                 padding: 8px;
-                border-radius: 6px;
-            }
+                border-radius: 8px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                box-shadow: 0 0 15px {GAME_COLORS['accent_green']};
+            }}
         """)
         add_point_btn.clicked.connect(self.add_point_from_inputs)
         layout.addWidget(add_point_btn)
@@ -393,6 +399,9 @@ class FanCurveEditor(QWidget):
         # Clear profile dropdown selection when loading manually (only if not blocked)
         if hasattr(self, 'profile_dropdown') and not self.profile_dropdown.signalsBlocked():
             self.profile_dropdown.setCurrentIndex(0)
+        # Clear preset dropdown when loading from profile
+        if hasattr(self, 'preset_dropdown') and not self.preset_dropdown.signalsBlocked():
+            self.preset_dropdown.setCurrentIndex(-1)
         self.update_display()
     
     def load_preset(self, preset_name: str):
@@ -400,6 +409,24 @@ class FanCurveEditor(QWidget):
         from ..control.asusctl_interface import get_preset_curve
         preset = get_preset_curve(preset_name)
         self.load_curve(preset)
+    
+    def on_preset_changed(self, preset_name: str):
+        """Handle preset dropdown change."""
+        if preset_name:
+            # Map display names to preset keys
+            preset_map = {
+                "Balanced": "balanced",
+                "Loudmouth": "loudmouth",
+                "Shush": "shush"
+            }
+            preset_key = preset_map.get(preset_name, preset_name.lower())
+            self.load_preset(preset_key)
+            
+            # Clear profile dropdown when preset is selected
+            if hasattr(self, 'profile_dropdown'):
+                self.profile_dropdown.blockSignals(True)
+                self.profile_dropdown.setCurrentIndex(0)
+                self.profile_dropdown.blockSignals(False)
     
     def refresh_profile_dropdown(self):
         """Refresh the profile dropdown with saved profiles."""
@@ -536,16 +563,16 @@ class FanCurveEditor(QWidget):
         else:
             self.curve_plot.setData(temps, speeds)
         
-        # Add control points using scatter plot
+        # Add control points using scatter plot with game-style colors
         for i, point in enumerate(self.current_curve.points):
             scatter = pg.ScatterPlotItem(
                 [point.temperature], [point.fan_speed],
-                pen=pg.mkPen(color='#2196F3', width=2),
-                brush=pg.mkBrush(color='white'),
+                pen=pg.mkPen(color=GAME_COLORS['accent_blue'], width=2),
+                brush=pg.mkBrush(color=GAME_COLORS['bg_card']),
                 size=12,
                 symbol='o',
                 hoverable=True,
-                hoverPen=pg.mkPen(color='#2196F3', width=3)
+                hoverPen=pg.mkPen(color=GAME_COLORS['accent_cyan'], width=3)
             )
             # Create a closure to capture the index correctly
             def make_click_handler(idx):
@@ -605,10 +632,44 @@ class FanCurveEditor(QWidget):
             self.load_curve(self.original_curve)
     
     def apply_curve(self):
-        """Apply the current curve."""
-        if self.current_curve:
+        """Apply the current curve and save it."""
+        if not self.current_curve:
+            QMessageBox.warning(self, "No Curve", "Please configure a fan curve first.")
+            return
+        
+        # Get current profile and fan
+        from ..control.asusctl_interface import Profile
+        current_profile = self.asusctl.get_current_profile() or Profile.BALANCED
+        fan_name = self.get_current_fan_name()
+        
+        # Ensure fan curves are enabled
+        if not self.asusctl.get_fan_curve_enabled(current_profile):
+            success, msg = self.asusctl.enable_fan_curves(current_profile, True)
+            if not success:
+                QMessageBox.warning(self, "Error", f"Failed to enable fan curves: {msg}")
+                return
+        
+        # Apply the curve
+        success, message = self.asusctl.set_fan_curve(current_profile, fan_name, self.current_curve)
+        
+        if success:
+            # Update original curve to match current
+            self.original_curve = FanCurve([FanCurvePoint(p.temperature, p.fan_speed) for p in self.current_curve.points])
+            # Clear preset dropdown since we're applying a custom curve
+            if hasattr(self, 'preset_dropdown'):
+                self.preset_dropdown.blockSignals(True)
+                self.preset_dropdown.setCurrentIndex(-1)  # Clear selection
+                self.preset_dropdown.blockSignals(False)
+            # Clear profile dropdown too
+            if hasattr(self, 'profile_dropdown'):
+                self.profile_dropdown.blockSignals(True)
+                self.profile_dropdown.setCurrentIndex(0)
+                self.profile_dropdown.blockSignals(False)
+            
             self.curve_changed.emit(self.current_curve)
-            QMessageBox.information(self, "Applied", "Fan curve has been applied!")
+            QMessageBox.information(self, "Applied", f"Fan curve has been applied and saved for {fan_name}!")
+        else:
+            QMessageBox.warning(self, "Error", f"Failed to apply fan curve:\n{message}")
     
     def get_current_fan_name(self) -> str:
         """Get the currently selected fan name."""
@@ -652,6 +713,7 @@ class FanCurveEditor(QWidget):
         # Disable button during test
         self.test_fan_btn.setEnabled(False)
         self.test_seconds_remaining = 5
+        self.test_fan_name = fan_name  # Store fan name for countdown display
         
         # Save original curve
         if self.current_curve:
@@ -659,26 +721,33 @@ class FanCurveEditor(QWidget):
                 FanCurvePoint(p.temperature, p.fan_speed) 
                 for p in self.current_curve.points
             ])
-        
-        # Create max curve for testing
-        max_curve = FanCurve([
-            FanCurvePoint(30, 100),
-            FanCurvePoint(50, 100),
-            FanCurvePoint(70, 100),
-            FanCurvePoint(85, 100),
-        ])
+        else:
+            # If no current curve, try to get original from system
+            current_profile = self.asusctl.get_current_profile() or Profile.BALANCED
+            curves = self.asusctl.get_fan_curves(current_profile)
+            if fan_name in curves:
+                self.original_curve_before_test = curves[fan_name]
         
         # Get current profile
         current_profile = self.asusctl.get_current_profile() or Profile.BALANCED
         
-        # Apply max curve
-        success, message = self.asusctl.set_fan_curve(current_profile, fan_name, max_curve)
+        # Enable fan curves for the profile if not already enabled
+        enabled = self.asusctl.get_fan_curve_enabled(current_profile)
+        if enabled is False:
+            self.asusctl.enable_fan_curves(current_profile, True)
         
-        if not success:
-            QMessageBox.warning(self, "Test Failed", f"Failed to test fan:\n{message}")
-            self.test_fan_btn.setEnabled(True)
-            self.test_fan_btn.setText("Test Fan (100% for 5s)")
-            return
+        # Create max curve for testing - asusctl requires exactly 8 points
+        # Use a range that covers typical temperatures: 30°C to 90°C
+        max_curve = FanCurve([
+            FanCurvePoint(30, 100),
+            FanCurvePoint(40, 100),
+            FanCurvePoint(50, 100),
+            FanCurvePoint(60, 100),
+            FanCurvePoint(70, 100),
+            FanCurvePoint(80, 100),
+            FanCurvePoint(85, 100),
+            FanCurvePoint(90, 100),
+        ])
         
         # Update button text to show starting
         self.test_fan_btn.setText(f"⏳ Setting {fan_name} fan to 100%...")
@@ -686,6 +755,15 @@ class FanCurveEditor(QWidget):
         # Give a moment for the button update to show
         from PyQt6.QtCore import QCoreApplication
         QCoreApplication.processEvents()
+        
+        # Apply max curve
+        success, message = self.asusctl.set_fan_curve(current_profile, fan_name, max_curve)
+        
+        if not success:
+            QMessageBox.warning(self, "Test Failed", f"Failed to test fan:\n{message}\n\nMake sure asusctl is properly installed and you have permissions.")
+            self.test_fan_btn.setEnabled(True)
+            self.test_fan_btn.setText("Test Fan (100% for 5s)")
+            return
         
         # Start countdown timer (updates every second) - must be singleShot=False for repeating
         self.test_countdown_timer = QTimer(self)
@@ -725,18 +803,24 @@ class FanCurveEditor(QWidget):
             # Stop countdown timer
             if self.test_countdown_timer:
                 self.test_countdown_timer.stop()
+                self.test_countdown_timer = None
     
     def restore_after_test(self, fan_name: str, profile: Profile):
         """Restore fan curve after test."""
         # Stop countdown timer
         if self.test_countdown_timer:
             self.test_countdown_timer.stop()
+            self.test_countdown_timer = None
         
         # Update button to show restoring
-        self.test_fan_btn.setText(f"Restoring {fan_name} Fan to previous settings...")
+        self.test_fan_btn.setText(f"⏳ Restoring {fan_name} Fan to previous settings...")
+        
+        # Process events to update UI
+        from PyQt6.QtCore import QCoreApplication
+        QCoreApplication.processEvents()
         
         # Restore original curve if available
-        if self.original_curve_before_test:
+        if hasattr(self, 'original_curve_before_test') and self.original_curve_before_test:
             success, message = self.asusctl.set_fan_curve(profile, fan_name, self.original_curve_before_test)
             if success:
                 # Reload curve in editor
@@ -760,14 +844,20 @@ class FanCurveEditor(QWidget):
             QMessageBox.information(
                 self,
                 "Test Complete",
-                f"{fan_name} fan test completed.\n\n"
+                f"✅ {fan_name} fan test completed.\n\n"
                 "Fan speed will return to normal based on temperature."
             )
         
         # Re-enable button and reset text
         self.test_fan_btn.setEnabled(True)
         self.test_fan_btn.setText("Test Fan (100% for 5s)")
-        self.test_restore_timer = None
-        self.test_countdown_timer = None
+        
+        # Clean up
+        if hasattr(self, 'test_restore_timer'):
+            self.test_restore_timer = None
+        if hasattr(self, 'test_countdown_timer'):
+            self.test_countdown_timer = None
+        if hasattr(self, 'test_fan_name'):
+            delattr(self, 'test_fan_name')
         self.test_seconds_remaining = 0
 

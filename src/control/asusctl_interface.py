@@ -37,15 +37,24 @@ class FanCurvePoint:
         return f"FanCurvePoint({self.temperature}°C, {self.fan_speed}%)"
     
     def to_asusctl_format(self) -> str:
-        """Convert to asusctl format: '<temp> <speed>'"""
-        return f"{self.temperature} {self.fan_speed}"
+        """Convert to asusctl format: '<temp>c:<speed>%'"""
+        return f"{self.temperature}c:{self.fan_speed}%"
     
     @classmethod
     def from_asusctl_format(cls, data: str) -> 'FanCurvePoint':
-        """Parse from asusctl format: '<temp> <speed>'"""
+        """Parse from asusctl format: '<temp>c:<speed>%' or '<temp> <speed>'"""
+        # Try new format first: 30c:100%
+        if 'c:' in data and '%' in data:
+            # Format: 30c:100%
+            temp_str, speed_str = data.split('c:')
+            speed_str = speed_str.rstrip('%')
+            return cls(int(temp_str), int(speed_str))
+        
+        # Fallback to old format: space-separated
         parts = data.strip().split()
         if len(parts) >= 2:
             return cls(int(parts[0]), int(parts[1]))
+        
         raise ValueError(f"Invalid fan curve point format: {data}")
 
 
@@ -106,12 +115,21 @@ class FanCurve:
         self.points = [p for p in self.points if p.temperature != temperature]
     
     def to_asusctl_format(self) -> str:
-        """Convert to asusctl format: space-separated '<temp> <speed>' pairs"""
-        return " ".join(p.to_asusctl_format() for p in self.points)
+        """Convert to asusctl format: comma-separated '<temp>c:<speed>%' pairs"""
+        return ",".join(p.to_asusctl_format() for p in self.points)
     
     @classmethod
     def from_asusctl_format(cls, data: str) -> 'FanCurve':
-        """Parse from asusctl format."""
+        """Parse from asusctl format: comma-separated or space-separated."""
+        # Try comma-separated format first: 30c:100%,50c:100%
+        if ',' in data and 'c:' in data:
+            point_strings = data.split(',')
+            points = []
+            for point_str in point_strings:
+                points.append(FanCurvePoint.from_asusctl_format(point_str.strip()))
+            return cls(points)
+        
+        # Fallback to space-separated format: 30 100 50 100
         parts = data.strip().split()
         if len(parts) % 2 != 0:
             raise ValueError("Invalid fan curve format: must have pairs of temperature and speed")
@@ -304,7 +322,8 @@ class AsusctlInterface:
         self,
         profile: Profile,
         fan_name: str,
-        curve: FanCurve
+        curve: FanCurve,
+        save_persistent: bool = True
     ) -> Tuple[bool, str]:
         """
         Set a fan curve for a profile and fan.
@@ -313,6 +332,7 @@ class AsusctlInterface:
             profile: Power profile
             fan_name: Name of the fan (e.g., 'CPU', 'GPU')
             curve: FanCurve object
+            save_persistent: If True, save to persistent storage for restoration
         
         Returns:
             Tuple of (success: bool, message: str)
@@ -339,6 +359,15 @@ class AsusctlInterface:
             )
             
             if result.returncode == 0:
+                # Save to persistent storage
+                if save_persistent:
+                    try:
+                        from .fan_curve_persistence import FanCurvePersistence
+                        persistence = FanCurvePersistence()
+                        persistence.save_active_curve(profile, fan_name, curve)
+                    except Exception as e:
+                        print(f"Warning: Could not save curve to persistent storage: {e}")
+                
                 return True, f"Fan curve set for {fan_name}"
             else:
                 return False, result.stderr or result.stdout
@@ -408,12 +437,16 @@ class AsusctlInterface:
             Tuple of (success: bool, message: str)
         """
         try:
-            # Create a temporary max speed curve
+            # Create a temporary max speed curve - asusctl requires exactly 8 points
             max_curve = FanCurve([
                 FanCurvePoint(30, 100),
+                FanCurvePoint(40, 100),
                 FanCurvePoint(50, 100),
+                FanCurvePoint(60, 100),
                 FanCurvePoint(70, 100),
+                FanCurvePoint(80, 100),
                 FanCurvePoint(85, 100),
+                FanCurvePoint(90, 100),
             ])
             
             # Get current profile
@@ -503,6 +536,18 @@ def get_preset_curve(name: str) -> FanCurve:
             FanCurvePoint(50, 100),
             FanCurvePoint(70, 100),
             FanCurvePoint(85, 100),
+        ]),
+        'loudmouth': FanCurve([
+            FanCurvePoint(30, 100),  # Max at 30% load (startup)
+            FanCurvePoint(50, 100),
+            FanCurvePoint(70, 100),
+            FanCurvePoint(85, 100),
+        ]),
+        'shush': FanCurve([
+            FanCurvePoint(30, 10),   # Very quiet
+            FanCurvePoint(50, 20),
+            FanCurvePoint(70, 40),
+            FanCurvePoint(85, 60),
         ]),
     }
     

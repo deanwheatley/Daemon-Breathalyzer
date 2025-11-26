@@ -17,10 +17,12 @@ from src.monitoring.log_monitor import LogEntry, LogPriority
 class TestLogViewerTab:
     """Tests for LogViewerTab widget."""
     
-    @patch('src.ui.log_viewer_tab.LogMonitor')
+    @patch('src.monitoring.log_monitor.LogMonitor')
     def test_log_viewer_creation(self, mock_monitor_class, qapp):
         """Test creating log viewer tab."""
         mock_monitor = Mock()
+        mock_monitor.on_new_entry = None
+        mock_monitor.on_error = None
         mock_monitor_class.return_value = mock_monitor
         
         viewer = LogViewerTab()
@@ -30,7 +32,7 @@ class TestLogViewerTab:
         assert mock_monitor.on_error is not None
         mock_monitor.start.assert_called_once()
     
-    @patch('src.ui.log_viewer_tab.LogMonitor')
+    @patch('src.monitoring.log_monitor.LogMonitor')
     def test_filter_panel_creation(self, mock_monitor_class, qapp):
         """Test filter panel creation."""
         mock_monitor = Mock()
@@ -51,7 +53,7 @@ class TestLogViewerTab:
         # Check time range group exists
         assert hasattr(viewer, 'time_range_group')
     
-    @patch('src.ui.log_viewer_tab.LogMonitor')
+    @patch('src.monitoring.log_monitor.LogMonitor')
     def test_viewer_panel_creation(self, mock_monitor_class, qapp):
         """Test viewer panel creation."""
         mock_monitor = Mock()
@@ -68,7 +70,7 @@ class TestLogViewerTab:
         assert hasattr(viewer, 'autoscroll_btn')
         assert hasattr(viewer, 'clear_logs_btn')
     
-    @patch('src.ui.log_viewer_tab.LogMonitor')
+    @patch('src.monitoring.log_monitor.LogMonitor')
     def test_on_new_entry(self, mock_monitor_class, qapp, qtbot):
         """Test handling new log entry."""
         mock_monitor = Mock()
@@ -91,7 +93,7 @@ class TestLogViewerTab:
         assert viewer.log_display.toPlainText() != ""
         assert 'Test error message' in viewer.log_display.toPlainText()
     
-    @patch('src.ui.log_viewer_tab.LogMonitor')
+    @patch('src.monitoring.log_monitor.LogMonitor')
     @patch('src.ui.log_viewer_tab.QMessageBox')
     def test_on_error(self, mock_messagebox, mock_monitor_class, qapp):
         """Test error handling."""
@@ -106,7 +108,7 @@ class TestLogViewerTab:
         # Check that warning was shown
         mock_messagebox.warning.assert_called_once()
     
-    @patch('src.ui.log_viewer_tab.LogMonitor')
+    @patch('src.monitoring.log_monitor.LogMonitor')
     def test_toggle_pause(self, mock_monitor_class, qapp):
         """Test pause/resume functionality."""
         mock_monitor = Mock()
@@ -131,7 +133,7 @@ class TestLogViewerTab:
         assert viewer.pause_btn.text() == "⏸ Pause"
         mock_monitor.resume.assert_called_once()
     
-    @patch('src.ui.log_viewer_tab.LogMonitor')
+    @patch('src.monitoring.log_monitor.LogMonitor')
     def test_clear_logs(self, mock_monitor_class, qapp):
         """Test clearing log display."""
         mock_monitor = Mock()
@@ -147,7 +149,7 @@ class TestLogViewerTab:
         
         assert viewer.log_display.toPlainText() == ""
     
-    @patch('src.ui.log_viewer_tab.LogMonitor')
+    @patch('src.monitoring.log_monitor.LogMonitor')
     def test_on_filter_changed(self, mock_monitor_class, qapp):
         """Test filter changes."""
         mock_monitor = Mock()
@@ -168,7 +170,7 @@ class TestLogViewerTab:
         # Check that display was refreshed
         mock_monitor.get_filtered_entries.assert_called()
     
-    @patch('src.ui.log_viewer_tab.LogMonitor')
+    @patch('src.monitoring.log_monitor.LogMonitor')
     def test_clear_filters(self, mock_monitor_class, qapp):
         """Test clearing all filters."""
         mock_monitor = Mock()
@@ -189,7 +191,7 @@ class TestLogViewerTab:
         assert viewer.search_input.text() == ""
         mock_monitor.clear_filters.assert_called_once()
     
-    @patch('src.ui.log_viewer_tab.LogMonitor')
+    @patch('src.monitoring.log_monitor.LogMonitor')
     def test_refresh_logs(self, mock_monitor_class, qapp):
         """Test refreshing logs."""
         mock_monitor = Mock()
@@ -204,7 +206,7 @@ class TestLogViewerTab:
         assert hasattr(mock_monitor, '_load_initial_logs')
         # Note: _load_initial_logs is called but we can't easily verify private methods
     
-    @patch('src.ui.log_viewer_tab.LogMonitor')
+    @patch('src.monitoring.log_monitor.LogMonitor')
     def test_refresh_display(self, mock_monitor_class, qapp):
         """Test refreshing log display."""
         mock_monitor = Mock()
@@ -236,7 +238,7 @@ class TestLogViewerTab:
         text = viewer.log_display.toPlainText()
         assert 'Error 1' in text or 'Info 1' in text
     
-    @patch('src.ui.log_viewer_tab.LogMonitor')
+    @patch('src.monitoring.log_monitor.LogMonitor')
     def test_update_error_summary(self, mock_monitor_class, qapp):
         """Test updating error summary."""
         mock_monitor = Mock()
@@ -258,7 +260,7 @@ class TestLogViewerTab:
         assert '2' in text   # Critical
         assert '5' in text   # Errors
     
-    @patch('src.ui.log_viewer_tab.LogMonitor')
+    @patch('src.monitoring.log_monitor.LogMonitor')
     def test_refresh_source_list(self, mock_monitor_class, qapp):
         """Test refreshing source list."""
         mock_monitor = Mock()
@@ -273,7 +275,7 @@ class TestLogViewerTab:
         assert viewer.source_combo.count() > 1
         assert viewer.source_combo.itemText(1) in ['service1', 'service2']
     
-    @patch('src.ui.log_viewer_tab.LogMonitor')
+    @patch('src.monitoring.log_monitor.LogMonitor')
     def test_close_event(self, mock_monitor_class, qapp):
         """Test cleanup on close."""
         mock_monitor = Mock()

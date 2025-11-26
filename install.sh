@@ -148,9 +148,99 @@ source venv/bin/activate
 # Install dependencies
 echo "📥 Installing dependencies..."
 pip install -q --upgrade pip
-pip install -q -r requirements.txt
+if ! pip install -q -r requirements.txt; then
+    echo "❌ Error: Failed to install some dependencies."
+    echo ""
+    echo "Please check the error messages above and ensure:"
+    echo "  1. You have internet connectivity"
+    echo "  2. pip is up to date"
+    echo ""
+    echo "You can try installing manually:"
+    echo "  source venv/bin/activate"
+    echo "  pip install -r requirements.txt"
+    exit 1
+fi
 
 echo "✅ Dependencies installed"
+echo ""
+
+# Verify critical Python libraries are installed
+echo "🔍 Verifying critical libraries..."
+MISSING_LIBS=()
+CRITICAL_LIBS=(
+    "PyQt6"
+    "PyQtGraph"
+    "psutil"
+    "numpy"
+)
+
+# Map import names to package names (some differ)
+LIB_PACKAGE_MAP=(
+    "PyQt6:PyQt6"
+    "PyQtGraph:pyqtgraph"
+    "psutil:psutil"
+    "numpy:numpy"
+)
+
+for lib in "${CRITICAL_LIBS[@]}"; do
+    # Map import name to package name
+    pkg_name="$lib"
+    case "$lib" in
+        "PyQtGraph")
+            pkg_name="pyqtgraph"
+            ;;
+        *)
+            pkg_name="$lib"
+            ;;
+    esac
+    
+    if ! python3 -c "import ${lib}" 2>/dev/null; then
+        MISSING_LIBS+=("$pkg_name")
+        echo "  ⚠️  $lib: NOT FOUND"
+    else
+        echo "  ✅ $lib: OK"
+    fi
+done
+
+if [ ${#MISSING_LIBS[@]} -gt 0 ]; then
+    echo ""
+    echo "❌ Error: Critical libraries are missing: ${MISSING_LIBS[*]}"
+    echo ""
+    echo "Attempting to install missing libraries..."
+    for pkg in "${MISSING_LIBS[@]}"; do
+        echo "  Installing $pkg..."
+        pip install -q "$pkg" || echo "    ⚠️  Failed to install $pkg"
+    done
+    
+    # Re-check using import names
+    STILL_MISSING=()
+    for lib in "${CRITICAL_LIBS[@]}"; do
+        if ! python3 -c "import ${lib}" 2>/dev/null; then
+            # Map back to package name for installation command
+            pkg_name="$lib"
+            case "$lib" in
+                "PyQtGraph")
+                    pkg_name="pyqtgraph"
+                    ;;
+            esac
+            STILL_MISSING+=("$pkg_name")
+        fi
+    done
+    
+    if [ ${#STILL_MISSING[@]} -gt 0 ]; then
+        echo ""
+        echo "❌ Warning: Some libraries could not be installed: ${STILL_MISSING[*]}"
+        echo "   The application may not work correctly."
+        echo "   Please install them manually:"
+        echo "   source venv/bin/activate"
+        echo "   pip install ${STILL_MISSING[*]}"
+        echo ""
+    else
+        echo "✅ All critical libraries are now installed"
+    fi
+else
+    echo "✅ All critical libraries verified"
+fi
 echo ""
 
 # Check and install Qt/XCB system dependencies
@@ -177,10 +267,24 @@ QT_PACKAGES=(
     "libxkbcommon-x11-0"
 )
 
+# Optional but recommended libraries
+OPTIONAL_PACKAGES=(
+    "lm-sensors"
+    "sensors"
+)
+
 # Check which packages are missing
 for package in "${QT_PACKAGES[@]}"; do
-    if ! dpkg -l | grep -q "^ii.*${package}"; then
+    if ! dpkg -l 2>/dev/null | grep -q "^ii.*${package}"; then
         MISSING_PACKAGES+=("$package")
+    fi
+done
+
+# Check optional packages
+MISSING_OPTIONAL=()
+for package in "${OPTIONAL_PACKAGES[@]}"; do
+    if ! dpkg -l 2>/dev/null | grep -q "^ii.*${package}"; then
+        MISSING_OPTIONAL+=("$package")
     fi
 done
 
@@ -203,14 +307,113 @@ else
     echo ""
 fi
 
+# Offer to install optional packages
+if [ ${#MISSING_OPTIONAL[@]} -gt 0 ]; then
+    echo "💡 Optional packages available:"
+    echo "   Packages: ${MISSING_OPTIONAL[*]}"
+    echo "   These can improve sensor readings and system monitoring."
+    read -p "   Install optional packages? (y/N): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if sudo apt install -y "${MISSING_OPTIONAL[@]}" 2>/dev/null; then
+            echo "✅ Optional packages installed"
+        else
+            echo "⚠️  Could not install optional packages (non-critical)"
+        fi
+    fi
+    echo ""
+fi
+
+# Hardware detection and driver installation
+if [ -f "$SCRIPT_DIR/check_and_install_drivers.py" ]; then
+    echo "🔍 Checking hardware and installing drivers if needed..."
+    
+    # Use venv Python if available, otherwise system Python
+    if [ -f "$SCRIPT_DIR/venv/bin/python3" ]; then
+        PYTHON_CMD="$SCRIPT_DIR/venv/bin/python3"
+    else
+        PYTHON_CMD="python3"
+    fi
+    
+    # Run hardware detection and driver installation
+    # This will detect hardware and offer to install drivers
+    if $PYTHON_CMD "$SCRIPT_DIR/check_and_install_drivers.py"; then
+        echo ""
+    else
+        echo "⚠️  Warning: Hardware detection had issues, but continuing installation..."
+        echo "   You can run driver detection later with:"
+        echo "   $PYTHON_CMD $SCRIPT_DIR/check_and_install_drivers.py"
+        echo ""
+    fi
+else
+    echo "⚠️  Note: Hardware detection script not found, skipping driver check."
+    echo ""
+fi
+
 # Make launcher executable
 chmod +x asus-control-launcher.sh
 
 # Install desktop entry
 DESKTOP_FILE="$HOME/.local/share/applications/asus-control.desktop"
 DESKTOP_DIR="$(dirname "$DESKTOP_FILE")"
+ICON_FILE="$SCRIPT_DIR/img/icon.png"
+# Fallback to JPG if PNG doesn't exist
+if [ ! -f "$ICON_FILE" ]; then
+    ICON_FILE="$SCRIPT_DIR/img/icon.jpg"
+fi
+ICON_DIR="$HOME/.local/share/icons/hicolor/256x256/apps"
+APP_ICON_PATH="$ICON_DIR/asus-control.png"
 
 mkdir -p "$DESKTOP_DIR"
+mkdir -p "$ICON_DIR"
+
+# Copy icon to standard location with multiple sizes for icon theme
+if [ -f "$ICON_FILE" ]; then
+    # Create multiple icon sizes for proper Linux icon theme support
+    ICON_NAME="asus-control"
+    ICON_ROOT_DIR="$HOME/.local/share/icons/hicolor"
+    
+    # Icon sizes to create
+    ICON_SIZES=(16 24 32 48 64 128 256 512)
+    
+    echo "📦 Installing icon in multiple sizes for icon theme..."
+    
+    # Use Python to create properly sized icons with transparency preserved
+    python3 << PYTHON_EOF
+from PIL import Image
+from pathlib import Path
+import sys
+
+source_icon = Path("$ICON_FILE")
+if not source_icon.exists():
+    print(f"Error: Icon not found at {source_icon}", file=sys.stderr)
+    sys.exit(1)
+
+img = Image.open(source_icon)
+base_dir = Path("$ICON_ROOT_DIR")
+
+for size in [16, 24, 32, 48, 64, 128, 256, 512]:
+    icon_dir = base_dir / f"{size}x{size}/apps"
+    icon_dir.mkdir(parents=True, exist_ok=True)
+    icon_path = icon_dir / "${ICON_NAME}.png"
+    resized = img.resize((size, size), Image.Resampling.LANCZOS)
+    resized.save(icon_path, "PNG")
+    print(f"  ✅ Created {size}x{size} icon")
+
+PYTHON_EOF
+    
+    # Update icon cache
+    if command -v gtk-update-icon-cache > /dev/null 2>&1; then
+        gtk-update-icon-cache -f -t "$ICON_ROOT_DIR" > /dev/null 2>&1
+    fi
+    
+    # Use icon theme name (not path) for proper transparency support
+    ICON_REF="$ICON_NAME"
+else
+    # Fallback to absolute path if icon not found
+    echo "⚠️  Warning: Icon file not found at $ICON_FILE"
+    ICON_REF="$ICON_FILE"
+fi
 
 # Create desktop entry with absolute path
 cat > "$DESKTOP_FILE" << EOF
@@ -218,10 +421,10 @@ cat > "$DESKTOP_FILE" << EOF
 Version=1.0
 Type=Application
 Name=Daemon Breathalyzer
-Comment=Modern GUI for ASUS laptop fan curve configuration with system monitoring
+Comment=Modern GUI for ASUS laptop fan curve configuration with system monitoring and log analysis
 Exec=$SCRIPT_DIR/asus-control-launcher.sh
 Path=$SCRIPT_DIR
-Icon=applications-system
+Icon=$ICON_REF
 Terminal=false
 Categories=System;Settings;HardwareSettings;
 StartupNotify=true

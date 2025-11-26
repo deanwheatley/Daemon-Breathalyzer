@@ -31,6 +31,10 @@ The application features a clean, modern UI with:
 - Python 3.10+
 - `python3-venv` package (for Debian/Ubuntu: `sudo apt install python3-venv`)
 
+### 📦 Distribution Package
+
+For distributing the app to new users, see the `package/` folder which contains everything needed for installation. The package is automatically kept up-to-date via a Makefile rule. See `PACKAGE.md` for details.
+
 ### Installation (Standalone App) ⭐ Recommended
 
 **One-Click Installation:**

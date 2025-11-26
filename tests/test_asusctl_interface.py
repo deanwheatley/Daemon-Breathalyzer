@@ -38,13 +38,18 @@ class TestFanCurvePoint:
     def test_point_to_asusctl_format(self):
         """Test converting point to asusctl format."""
         point = FanCurvePoint(50, 60)
-        assert point.to_asusctl_format() == "50 60"
+        assert point.to_asusctl_format() == "50c:60%"
     
     def test_point_from_asusctl_format(self):
         """Test parsing point from asusctl format."""
-        point = FanCurvePoint.from_asusctl_format("50 60")
+        # Test new format
+        point = FanCurvePoint.from_asusctl_format("50c:60%")
         assert point.temperature == 50
         assert point.fan_speed == 60
+        # Test old format (backward compatibility)
+        point2 = FanCurvePoint.from_asusctl_format("50 60")
+        assert point2.temperature == 50
+        assert point2.fan_speed == 60
     
     def test_point_from_asusctl_format_invalid(self):
         """Test parsing invalid asusctl format."""
@@ -160,8 +165,10 @@ class TestFanCurve:
         ])
         
         result = curve.to_asusctl_format()
-        assert "30 20" in result
-        assert "70 80" in result
+        # Format should be comma-separated: "30c:20%,70c:80%"
+        assert "30c:20%" in result
+        assert "70c:80%" in result
+        assert "," in result
     
     def test_curve_from_asusctl_format(self):
         """Test parsing curve from asusctl format."""

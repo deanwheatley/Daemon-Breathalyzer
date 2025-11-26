@@ -14,6 +14,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QThread, QTimer
 from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QTextCursor
 
 from ..monitoring.log_monitor import LogMonitor, LogEntry, LogPriority
+from .game_style_theme import GAME_COLORS, GAME_STYLES
 
 
 class LogViewerTab(QWidget):
@@ -35,6 +36,9 @@ class LogViewerTab(QWidget):
     
     def setup_ui(self):
         """Set up the UI."""
+        # Apply game-style theme
+        self.setStyleSheet(GAME_STYLES['widget'])
+        
         layout = QVBoxLayout(self)
         layout.setSpacing(15)
         layout.setContentsMargins(30, 30, 30, 30)
@@ -45,7 +49,7 @@ class LogViewerTab(QWidget):
         title_font.setPointSize(20)
         title_font.setWeight(QFont.Weight.DemiBold)
         title.setFont(title_font)
-        title.setStyleSheet("color: #212121;")
+        title.setStyleSheet(f"color: {GAME_COLORS['accent_blue']};")
         layout.addWidget(title)
         
         # Main content area (split view)
@@ -69,27 +73,30 @@ class LogViewerTab(QWidget):
     def _create_filter_panel(self) -> QWidget:
         """Create the filter panel."""
         panel = QGroupBox("Filters")
-        panel.setStyleSheet("""
-            QGroupBox {
-                font-weight: bold;
-                border: 1px solid #e8e8e8;
-                border-radius: 8px;
-                margin-top: 10px;
-                padding-top: 10px;
-            }
-        """)
+        panel.setStyleSheet(GAME_STYLES['groupbox'])
         layout = QVBoxLayout(panel)
         layout.setSpacing(10)
         
         # Priority filters
         priority_label = QLabel("Priority:")
-        priority_label.setStyleSheet("color: #666; font-weight: bold;")
+        priority_label.setStyleSheet(f"color: {GAME_COLORS['text_secondary']}; font-weight: bold;")
         layout.addWidget(priority_label)
         
         self.priority_checkboxes = {}
         for priority in LogPriority:
             checkbox = QCheckBox(priority.name)
             checkbox.setChecked(True)
+            checkbox.setStyleSheet(f"""
+                QCheckBox {{
+                    color: {GAME_COLORS['text_primary']};
+                    font-size: 12px;
+                    padding: 5px;
+                }}
+                QCheckBox::indicator {{
+                    width: 20px;
+                    height: 20px;
+                }}
+            """)
             checkbox.stateChanged.connect(self._on_filter_changed)
             self.priority_checkboxes[priority] = checkbox
             layout.addWidget(checkbox)
@@ -98,19 +105,20 @@ class LogViewerTab(QWidget):
         
         # Source filters
         source_label = QLabel("Sources:")
-        source_label.setStyleSheet("color: #666; font-weight: bold;")
+        source_label.setStyleSheet(f"color: {GAME_COLORS['text_secondary']}; font-weight: bold;")
         layout.addWidget(source_label)
         
         self.source_combo = QComboBox()
         self.source_combo.setEditable(True)
         self.source_combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.source_combo.setStyleSheet(GAME_STYLES['combobox'])
         self.source_combo.lineEdit().setPlaceholderText("All sources")
         self.source_combo.currentTextChanged.connect(self._on_filter_changed)
         layout.addWidget(self.source_combo)
         
         # Time range
         time_label = QLabel("Time Range:")
-        time_label.setStyleSheet("color: #666; font-weight: bold;")
+        time_label.setStyleSheet(f"color: {GAME_COLORS['text_secondary']}; font-weight: bold;")
         layout.addWidget(time_label)
         
         self.time_range_group = QButtonGroup(self)
@@ -133,11 +141,23 @@ class LogViewerTab(QWidget):
         
         # Text search
         search_label = QLabel("Search:")
-        search_label.setStyleSheet("color: #666; font-weight: bold;")
+        search_label.setStyleSheet(f"color: {GAME_COLORS['text_secondary']}; font-weight: bold;")
         layout.addWidget(search_label)
         
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search log messages...")
+        self.search_input.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {GAME_COLORS['bg_card']};
+                color: {GAME_COLORS['text_primary']};
+                border: 2px solid {GAME_COLORS['border']};
+                border-radius: 6px;
+                padding: 4px;
+            }}
+            QLineEdit:hover {{
+                border: 2px solid {GAME_COLORS['accent_blue']};
+            }}
+        """)
         self.search_input.textChanged.connect(self._on_filter_changed)
         layout.addWidget(self.search_input)
         
@@ -147,10 +167,12 @@ class LogViewerTab(QWidget):
         control_layout = QHBoxLayout()
         
         self.clear_btn = QPushButton("Clear Filters")
+        self.clear_btn.setStyleSheet(GAME_STYLES['button'])
         self.clear_btn.clicked.connect(self._clear_filters)
         control_layout.addWidget(self.clear_btn)
         
         self.refresh_btn = QPushButton("Refresh")
+        self.refresh_btn.setStyleSheet(GAME_STYLES['button'])
         self.refresh_btn.clicked.connect(self._refresh_logs)
         control_layout.addWidget(self.refresh_btn)
         
@@ -163,15 +185,7 @@ class LogViewerTab(QWidget):
     def _create_viewer_panel(self) -> QWidget:
         """Create the log viewer panel."""
         panel = QGroupBox("Log Viewer")
-        panel.setStyleSheet("""
-            QGroupBox {
-                font-weight: bold;
-                border: 1px solid #e8e8e8;
-                border-radius: 8px;
-                margin-top: 10px;
-                padding-top: 10px;
-            }
-        """)
+        panel.setStyleSheet(GAME_STYLES['groupbox'])
         layout = QVBoxLayout(panel)
         
         # Controls
@@ -179,15 +193,18 @@ class LogViewerTab(QWidget):
         
         self.pause_btn = QPushButton("⏸ Pause")
         self.pause_btn.setCheckable(True)
+        self.pause_btn.setStyleSheet(GAME_STYLES['button'])
         self.pause_btn.clicked.connect(self._toggle_pause)
         controls_layout.addWidget(self.pause_btn)
         
         self.autoscroll_btn = QPushButton("📜 Auto-scroll")
         self.autoscroll_btn.setCheckable(True)
         self.autoscroll_btn.setChecked(True)
+        self.autoscroll_btn.setStyleSheet(GAME_STYLES['button'])
         controls_layout.addWidget(self.autoscroll_btn)
         
         self.clear_logs_btn = QPushButton("🗑️ Clear")
+        self.clear_logs_btn.setStyleSheet(GAME_STYLES['button'])
         self.clear_logs_btn.clicked.connect(self._clear_logs)
         controls_layout.addWidget(self.clear_logs_btn)
         
@@ -195,17 +212,17 @@ class LogViewerTab(QWidget):
         
         layout.addLayout(controls_layout)
         
-        # Log display
+        # Log display with game-style dark theme
         self.log_display = QPlainTextEdit()
         self.log_display.setReadOnly(True)
         self.log_display.setFont(QFont("Monospace", 9))
-        self.log_display.setStyleSheet("""
-            QPlainTextEdit {
-                background-color: #1e1e1e;
-                color: #d4d4d4;
-                border: 1px solid #3e3e3e;
+        self.log_display.setStyleSheet(f"""
+            QPlainTextEdit {{
+                background-color: {GAME_COLORS['bg_dark']};
+                color: {GAME_COLORS['text_primary']};
+                border: 2px solid {GAME_COLORS['border']};
                 border-radius: 4px;
-            }
+            }}
         """)
         layout.addWidget(self.log_display)
         
@@ -214,12 +231,17 @@ class LogViewerTab(QWidget):
     def _create_error_summary(self) -> QWidget:
         """Create error summary bar."""
         panel = QWidget()
-        panel.setStyleSheet("background-color: #f5f5f5; border-radius: 6px; padding: 10px;")
+        panel.setStyleSheet(f"""
+            background-color: {GAME_COLORS['bg_card']};
+            border: 2px solid {GAME_COLORS['border']};
+            border-radius: 6px;
+            padding: 10px;
+        """)
         layout = QHBoxLayout(panel)
         layout.setContentsMargins(15, 8, 15, 8)
         
         self.summary_label = QLabel("Error Summary: Loading...")
-        self.summary_label.setStyleSheet("color: #666;")
+        self.summary_label.setStyleSheet(f"color: {GAME_COLORS['text_secondary']};")
         layout.addWidget(self.summary_label)
         
         layout.addStretch()

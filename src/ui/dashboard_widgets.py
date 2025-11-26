@@ -13,6 +13,8 @@ from PyQt6.QtGui import QFont, QColor, QPainter, QPen
 import pyqtgraph as pg
 from typing import Optional, List
 
+from .game_style_theme import GAME_COLORS
+
 
 class MetricCard(QWidget):
     """A card widget displaying a single metric value."""
@@ -101,35 +103,40 @@ class GraphWidget(QWidget):
         self.setMinimumHeight(300)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         
-        # Create PyQtGraph widget with modern styling
+        # Create PyQtGraph widget with game-style dark theme
         self.graph = pg.PlotWidget()
-        self.graph.setBackground('white')
-        self.graph.setLabel('left', 'Value', **{'color': '#666', 'font-size': '11pt'})
-        self.graph.setLabel('bottom', 'Time (seconds)', **{'color': '#666', 'font-size': '11pt'})
-        self.graph.showGrid(x=True, y=True, alpha=0.2)
+        # Dark background with game-style colors
+        bg_color = GAME_COLORS['bg_card']
+        self.graph.setBackground(pg.mkColor(bg_color))
+        self.graph.setLabel('left', 'Value', **{'color': GAME_COLORS['text_secondary'], 'font-size': '11pt'})
+        self.graph.setLabel('bottom', 'Time (seconds)', **{'color': GAME_COLORS['text_secondary'], 'font-size': '11pt'})
+        self.graph.showGrid(x=True, y=True, alpha=0.1)
         
-        # Modern color palette - softer, more minimalist
-        self.graph.getAxis('left').setPen(pg.mkPen(color='#ccc', width=1))
-        self.graph.getAxis('bottom').setPen(pg.mkPen(color='#ccc', width=1))
+        # Game-style axis colors
+        self.graph.getAxis('left').setPen(pg.mkPen(color=GAME_COLORS['border'], width=1))
+        self.graph.getAxis('bottom').setPen(pg.mkPen(color=GAME_COLORS['border'], width=1))
+        # Axis text colors
+        self.graph.getAxis('left').setTextPen(pg.mkPen(color=GAME_COLORS['text_secondary']))
+        self.graph.getAxis('bottom').setTextPen(pg.mkPen(color=GAME_COLORS['text_secondary']))
         
-        # Create plots with modern colors
-        self.cpu_plot = self.graph.plot(pen=pg.mkPen(color='#2196F3', width=2.5), name='CPU %')
-        self.cpu_temp_plot = self.graph.plot(pen=pg.mkPen(color='#F44336', width=2.5), name='CPU Temp')
-        self.memory_plot = self.graph.plot(pen=pg.mkPen(color='#FF9800', width=2.5), name='Memory %')
-        self.gpu_plot = self.graph.plot(pen=pg.mkPen(color='#00BCD4', width=2.5), name='GPU %')
-        self.gpu_temp_plot = self.graph.plot(pen=pg.mkPen(color='#E91E63', width=2.5), name='GPU Temp')
+        # Create plots with game-style neon colors
+        self.cpu_plot = self.graph.plot(pen=pg.mkPen(color=GAME_COLORS['accent_blue'], width=2.5), name='CPU %')
+        self.cpu_temp_plot = self.graph.plot(pen=pg.mkPen(color=GAME_COLORS['accent_red'], width=2.5), name='CPU Temp')
+        self.memory_plot = self.graph.plot(pen=pg.mkPen(color=GAME_COLORS['accent_orange'], width=2.5), name='Memory %')
+        self.gpu_plot = self.graph.plot(pen=pg.mkPen(color=GAME_COLORS['accent_cyan'], width=2.5), name='GPU %')
+        self.gpu_temp_plot = self.graph.plot(pen=pg.mkPen(color=GAME_COLORS['accent_pink'], width=2.5), name='GPU Temp')
         
-        # Layout with subtle border
+        # Layout with game-style border
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         
         container = QWidget()
-        container.setStyleSheet("""
-            QWidget {
-                background-color: white;
-                border: 1px solid #e8e8e8;
+        container.setStyleSheet(f"""
+            QWidget {{
+                background-color: {GAME_COLORS['bg_card']};
+                border: 2px solid {GAME_COLORS['border']};
                 border-radius: 12px;
-            }
+            }}
         """)
         container_layout = QVBoxLayout(container)
         container_layout.setContentsMargins(15, 15, 15, 15)
@@ -137,10 +144,14 @@ class GraphWidget(QWidget):
         
         layout.addWidget(container)
         
-        # Modern legend styling
+        # Game-style legend
         legend = self.graph.addLegend(offset=(10, 10))
-        legend.setPen(pg.mkPen(color='#e0e0e0', width=1))
-        legend.setBrush(pg.mkBrush(color=(255, 255, 255, 230)))
+        legend.setPen(pg.mkPen(color=GAME_COLORS['border'], width=1))
+        legend.setBrush(pg.mkBrush(color=pg.mkColor(GAME_COLORS['bg_card'] + 'F0')))  # Semi-transparent
+        # Legend text color
+        for item in legend.items:
+            if hasattr(item, 'label'):
+                item.label.setColor(pg.mkColor(GAME_COLORS['text_primary']))
     
     def update_data(self, history: dict):
         """Update graph with new historical data."""

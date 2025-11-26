@@ -43,7 +43,15 @@ class SystemMonitor:
             'gpu_memory_percent': None,
             'gpu_power': None,
             'fan_speeds': [],
+            'fps': None,
+            'network_sent_mbps': 0.0,
+            'network_recv_mbps': 0.0,
+            'network_total_mbps': 0.0,
         }
+        
+        # Network monitoring (for bandwidth calculation)
+        self._last_net_io = None
+        self._last_net_time = None
         
         # Historical data (for graphs)
         self.history = {
@@ -152,15 +160,15 @@ class SystemMonitor:
     
     def _get_gpu_metrics(self) -> Dict:
         """Get NVIDIA GPU metrics if available."""
-        metrics = {
-            'utilization': None,
-            'temperature': None,
-            'memory_percent': None,
-            'power': None,
-        }
+        metrics = {}
         
+        # Always try to get GPU metrics, even if initial check failed
+        # (GPU might have been unavailable at startup but is now available)
         if not self._nvidia_available:
-            return metrics
+            # Re-check if GPU became available
+            self._nvidia_available = self._check_nvidia_available()
+            if not self._nvidia_available:
+                return metrics
         
         # Try py3nvml library
         if self._use_nvml and self._nvml_module:
@@ -211,49 +219,191 @@ class SystemMonitor:
             
             if result.returncode == 0 and result.stdout.strip():
                 # Parse output: "temp, util, mem_used, mem_total, power"
-                values = result.stdout.strip().split(', ')
+                # Handle both ", " and "," separators
+                output = result.stdout.strip()
+                # Split by comma and strip whitespace from each value
+                values = [v.strip() for v in output.split(',')]
                 if len(values) >= 4:
-                    metrics['temperature'] = float(values[0])
-                    metrics['utilization'] = float(values[1])
-                    mem_used_gb = float(values[2])
-                    mem_total_gb = float(values[3])
-                    metrics['memory_percent'] = (mem_used_gb / mem_total_gb) * 100 if mem_total_gb > 0 else 0
-                    metrics['memory_used_gb'] = mem_used_gb
-                    metrics['memory_total_gb'] = mem_total_gb
-                    if len(values) >= 5:
-                        try:
-                            metrics['power'] = float(values[4])
-                        except:
-                            pass
+                    try:
+                        metrics['temperature'] = float(values[0])
+                        metrics['utilization'] = float(values[1])
+                        mem_used_gb = float(values[2])
+                        mem_total_gb = float(values[3])
+                        metrics['memory_percent'] = (mem_used_gb / mem_total_gb) * 100 if mem_total_gb > 0 else 0
+                        metrics['memory_used_gb'] = mem_used_gb
+                        metrics['memory_total_gb'] = mem_total_gb
+                        if len(values) >= 5:
+                            try:
+                                metrics['power'] = float(values[4])
+                            except (ValueError, IndexError):
+                                pass
+                    except (ValueError, IndexError) as e:
+                        # If parsing fails, log and return empty metrics
+                        print(f"Warning: Failed to parse nvidia-smi output: {e}")
+                        print(f"Output was: {output}")
         except Exception:
             pass
         
         return metrics
     
     def _get_fan_speeds(self) -> List[Dict]:
-        """Get fan speeds from system sensors."""
+        """Get fan speeds from system sensors, identifying CPU and GPU fans."""
         fan_speeds = []
         
+        # Try sensors command first (more reliable naming)
         try:
-            # Try hwmon for fan speeds
-            import glob
-            for fan_path in glob.glob('/sys/class/hwmon/hwmon*/fan*_input'):
-                try:
-                    with open(fan_path, 'r') as f:
-                        rpm = int(f.read().strip())
+            result = subprocess.run(
+                ['sensors'],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            if result.returncode == 0:
+                import re
+                # Look for fan lines: "cpu_fan:     6300 RPM" or "Fan1:     2300 RPM"
+                for line in result.stdout.split('\n'):
+                    # Match patterns like "cpu_fan:", "gpu_fan:", "Fan1:", etc.
+                    match = re.search(r'(cpu_fan|gpu_fan|fan[0-9]?)\s*:\s*(\d+)\s*RPM', line, re.IGNORECASE)
+                    if match:
+                        fan_name = match.group(1).lower()
+                        rpm = int(match.group(2))
                         if rpm > 0:
-                            # Extract fan name
-                            fan_name = fan_path.split('/')[-1].replace('_input', '')
+                            # Normalize names
+                            if 'cpu' in fan_name:
+                                normalized_name = 'CPU'
+                            elif 'gpu' in fan_name:
+                                normalized_name = 'GPU'
+                            else:
+                                normalized_name = fan_name.title()
+                            
                             fan_speeds.append({
-                                'name': fan_name,
-                                'rpm': rpm
+                                'name': normalized_name,
+                                'rpm': rpm,
+                                'raw_name': fan_name
                             })
-                except (FileNotFoundError, ValueError):
-                    continue
         except Exception:
             pass
         
+        # Fallback: try hwmon for fan speeds if sensors didn't work
+        if not fan_speeds:
+            try:
+                import glob
+                fan_files = {}
+                # Collect all fan input files
+                for fan_path in glob.glob('/sys/class/hwmon/hwmon*/fan*_input'):
+                    try:
+                        with open(fan_path, 'r') as f:
+                            rpm = int(f.read().strip())
+                            if rpm > 0:
+                                # Extract fan name
+                                fan_name = fan_path.split('/')[-1].replace('_input', '')
+                                
+                                # Try to determine if it's CPU or GPU by checking label
+                                label_path = fan_path.replace('_input', '_label')
+                                try:
+                                    with open(label_path, 'r') as lf:
+                                        label = lf.read().strip().lower()
+                                        if 'cpu' in label:
+                                            normalized_name = 'CPU'
+                                        elif 'gpu' in label:
+                                            normalized_name = 'GPU'
+                                        else:
+                                            normalized_name = fan_name.title()
+                                except:
+                                    # No label, use generic name
+                                    normalized_name = fan_name.title()
+                                
+                                fan_speeds.append({
+                                    'name': normalized_name,
+                                    'rpm': rpm,
+                                    'raw_name': fan_name
+                                })
+                    except (FileNotFoundError, ValueError):
+                        continue
+                
+                # Sort fans: CPU first, then GPU, then others
+                def fan_sort_key(f):
+                    name = f['name'].upper()
+                    if name == 'CPU':
+                        return (0, name)
+                    elif name == 'GPU':
+                        return (1, name)
+                    else:
+                        return (2, name)
+                
+                fan_speeds.sort(key=fan_sort_key)
+                
+            except Exception:
+                pass
+        
         return fan_speeds
+    
+    def _update_network_metrics(self):
+        """Update network traffic and bandwidth metrics."""
+        try:
+            net_io = psutil.net_io_counters()
+            current_time = time.time()
+            
+            if self._last_net_io is not None and self._last_net_time is not None:
+                # Calculate time delta
+                time_delta = current_time - self._last_net_time
+                
+                if time_delta > 0:
+                    # Calculate bytes per second
+                    bytes_sent_per_sec = (net_io.bytes_sent - self._last_net_io.bytes_sent) / time_delta
+                    bytes_recv_per_sec = (net_io.bytes_recv - self._last_net_io.bytes_recv) / time_delta
+                    
+                    # Convert to Mbps (megabits per second)
+                    # 1 byte = 8 bits, 1 Mbps = 1,000,000 bits
+                    self.metrics['network_sent_mbps'] = (bytes_sent_per_sec * 8) / 1_000_000
+                    self.metrics['network_recv_mbps'] = (bytes_recv_per_sec * 8) / 1_000_000
+                    self.metrics['network_total_mbps'] = self.metrics['network_sent_mbps'] + self.metrics['network_recv_mbps']
+            
+            # Store current values for next calculation
+            self._last_net_io = net_io
+            self._last_net_time = current_time
+            
+        except Exception as e:
+            # If network monitoring fails, reset to 0
+            self.metrics['network_sent_mbps'] = 0.0
+            self.metrics['network_recv_mbps'] = 0.0
+            self.metrics['network_total_mbps'] = 0.0
+    
+    def _update_fps_metrics(self):
+        """Update FPS metrics (attempts to detect frame rate from GPU or system)."""
+        try:
+            # Try to get FPS from NVIDIA GPU using nvidia-smi
+            # Note: nvidia-smi doesn't directly provide FPS, but we can try
+            # to estimate based on GPU utilization and clock speeds
+            if self._nvidia_available:
+                # Try to get actual frame rate if available via other means
+                # For now, we'll leave it as None and let users know it's not available
+                # In the future, could integrate with:
+                # - MangoHud frame rate display (if installed)
+                # - Game-specific APIs (Steam, etc.)
+                # - Screen capture frame rate monitoring
+                # - Wayland compositor frame rate
+                pass
+            
+            # Check for common FPS monitoring tools/processes
+            # This is a basic implementation - can be extended
+            try:
+                # Try to read from MangoHud if available
+                # MangoHud stores FPS in /tmp/MangoHud_*.txt files
+                import glob
+                mangohud_files = glob.glob('/tmp/MangoHud_*.txt')
+                if mangohud_files:
+                    # Try to parse MangoHud output (if available)
+                    pass
+            except:
+                pass
+            
+            # Set to None if no FPS data available
+            # UI will display "N/A" when FPS is None
+            self.metrics['fps'] = None
+            
+        except Exception:
+            self.metrics['fps'] = None
     
     def update_metrics(self):
         """Update all system metrics."""
@@ -283,13 +433,28 @@ class SystemMonitor:
         
         # GPU metrics
         gpu_metrics = self._get_gpu_metrics()
-        self.metrics['gpu_utilization'] = gpu_metrics.get('utilization')
-        self.metrics['gpu_temp'] = gpu_metrics.get('temperature')
-        self.metrics['gpu_memory_percent'] = gpu_metrics.get('memory_percent')
-        self.metrics['gpu_power'] = gpu_metrics.get('power')
+        # Store GPU metrics - always update if we got metrics (even if 0)
+        if gpu_metrics:
+            # Update all fields from retrieved metrics - including 0 values
+            if 'utilization' in gpu_metrics:
+                # Ensure we store 0.0 instead of None when GPU is idle
+                self.metrics['gpu_utilization'] = float(gpu_metrics['utilization'])
+            if 'temperature' in gpu_metrics:
+                self.metrics['gpu_temp'] = float(gpu_metrics['temperature'])
+            if 'memory_percent' in gpu_metrics:
+                self.metrics['gpu_memory_percent'] = float(gpu_metrics['memory_percent'])
+            if 'power' in gpu_metrics:
+                self.metrics['gpu_power'] = float(gpu_metrics['power'])
+        # Note: Don't set to None if no metrics - keep previous value
         
         # Fan speeds
         self.metrics['fan_speeds'] = self._get_fan_speeds()
+        
+        # Network metrics
+        self._update_network_metrics()
+        
+        # FPS monitoring
+        self._update_fps_metrics()
         
         # Update history
         timestamp = time.time()
