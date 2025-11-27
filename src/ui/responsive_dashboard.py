@@ -19,7 +19,7 @@ from ..utils.preferences_manager import PreferencesManager
 from .dashboard_widgets import MetricCard, GraphWidget
 from .fan_speed_gauge import FanSpeedGauge
 from .game_style_theme import GAME_COLORS, GAME_STYLES
-from .animated_widgets import AnimatedMetricCard, AnimatedIcon
+from .animated_widgets import AnimatedMetricCard
 from .ui_scaling import UIScaling
 
 
@@ -44,7 +44,7 @@ class ResponsiveDashboard(QWidget):
         layout.setSpacing(20)
         layout.setContentsMargins(30, 30, 30, 30)
         
-        # Title with animated icon
+        # Title
         title_layout = QHBoxLayout()
         self.title_label = QLabel("System Monitor")
         self.title_label.setStyleSheet(f"color: {GAME_COLORS['text_primary']};")
@@ -53,13 +53,6 @@ class ResponsiveDashboard(QWidget):
         
         # Base font size for scaling
         self._base_title_font_size = 24
-        
-        # Animated icon
-        icon_path = self._find_icon_path()
-        if icon_path:
-            self.animated_icon = AnimatedIcon(str(icon_path), self)
-            self.animated_icon.setFixedSize(50, 50)
-            title_layout.addWidget(self.animated_icon)
         
         layout.addLayout(title_layout)
         
@@ -140,18 +133,6 @@ class ResponsiveDashboard(QWidget):
         if hasattr(self, 'graph_widget') and hasattr(self.graph_widget, 'update_scaling'):
             self.graph_widget.update_scaling()
     
-    def _find_icon_path(self) -> Optional[Path]:
-        """Find icon path."""
-        project_root = Path(__file__).parent.parent.parent
-        icon_paths = [
-            project_root / "img" / "icon.png",
-            project_root / "img" / "icon.jpg",
-        ]
-        for icon_path in icon_paths:
-            if icon_path.exists():
-                return icon_path
-        return None
-    
     def _create_metric_widgets(self):
         """Create all metric widgets."""
         # CPU metrics
@@ -180,9 +161,7 @@ class ResponsiveDashboard(QWidget):
         # FPS
         self.metric_widgets['fps'] = AnimatedMetricCard("FPS", "fps", GAME_COLORS['accent_pink'])
         
-        # Fan gauges
-        self.metric_widgets['cpu_fan_gauge'] = FanSpeedGauge("CPU Fan", max_rpm=7000, color=GAME_COLORS['accent_blue'])
-        self.metric_widgets['gpu_fan_gauge'] = FanSpeedGauge("GPU Fan", max_rpm=7000, color=GAME_COLORS['accent_cyan'])
+        # Fan gauges removed from System Monitor
         
         # Add all widgets to grid
         self._update_layout()
@@ -209,7 +188,6 @@ class ResponsiveDashboard(QWidget):
             'memory', 'memory_used', 'gpu_usage',
             'gpu_temp', 'gpu_memory', 'fps',
             'network_sent', 'network_recv', 'network_total',
-            'cpu_fan_gauge', 'gpu_fan_gauge',
         ]
         
         for widget_name in widget_order:
@@ -472,35 +450,7 @@ class ResponsiveDashboard(QWidget):
                 self.metric_widgets['fps'].set_value(fps, decimals=0) if fps is not None else \
                     self.metric_widgets['fps'].set_value(None, text="N/A")
         
-        # Fan speeds
-        fan_speeds = metrics.get('fan_speeds', [])
-        cpu_fan_rpm = None
-        gpu_fan_rpm = None
-        for fan in fan_speeds:
-            name = fan.get('name', '').upper()
-            if name == 'CPU':
-                cpu_fan_rpm = fan.get('rpm')
-            elif name == 'GPU':
-                gpu_fan_rpm = fan.get('rpm')
-        
-        if 'cpu_fan_gauge' in self.metric_widgets:
-            self.metric_widgets['cpu_fan_gauge'].set_rpm(cpu_fan_rpm)
-            # Set profile name
-            try:
-                from ..control.asusctl_interface import Profile
-                current_profile = self.asusctl.get_current_profile() or Profile.BALANCED
-                self.metric_widgets['cpu_fan_gauge'].set_profile_name(current_profile.value)
-            except:
-                pass
-        
-        if 'gpu_fan_gauge' in self.metric_widgets:
-            self.metric_widgets['gpu_fan_gauge'].set_rpm(gpu_fan_rpm)
-            try:
-                from ..control.asusctl_interface import Profile
-                current_profile = self.asusctl.get_current_profile() or Profile.BALANCED
-                self.metric_widgets['gpu_fan_gauge'].set_profile_name(current_profile.value)
-            except:
-                pass
+        # Fan gauges removed from System Monitor
         
         # Update graph
         if hasattr(self, 'graph_widget'):

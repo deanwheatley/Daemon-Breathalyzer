@@ -21,6 +21,7 @@ import os
 from ..control.asusctl_interface import AsusctlInterface, Profile, FanCurve, FanCurvePoint
 from ..monitoring.system_monitor import SystemMonitor
 from .game_style_theme import GAME_COLORS, GAME_STYLES
+from .ui_scaling import UIScaling
 
 
 class FanTestTile(QGroupBox):
@@ -42,8 +43,17 @@ class FanTestTile(QGroupBox):
         self.test_duration = 300  # 5 minutes in seconds
         self.time_remaining = 0
         
+        # Base sizes for scaling
+        self._base_checkbox_font_size = 14
+        self._base_label_font_size = 13
+        self._base_timer_font_size = 18
+        self._base_rpm_font_size = 20
+        self._base_speed_font_size = 20
+        self._base_layout_spacing = 10
+        
         self._init_ui()
         self._init_timers()
+        self.update_scaling()
     
     def _init_ui(self):
         """Initialize the UI."""
@@ -81,33 +91,33 @@ class FanTestTile(QGroupBox):
         
         # Timer display
         timer_layout = QHBoxLayout()
-        timer_label = QLabel("Time Remaining:")
-        timer_label.setStyleSheet(f"font-weight: bold; font-size: 13px; color: {GAME_COLORS['text_secondary']};")
+        self.timer_label = QLabel("Time Remaining:")
+        self.timer_label.setStyleSheet(f"font-weight: bold; color: {GAME_COLORS['text_secondary']};")
         self.timer_display = QLabel("--:--")
-        self.timer_display.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {GAME_COLORS['accent_red']};")
-        timer_layout.addWidget(timer_label)
+        self.timer_display.setStyleSheet(f"font-weight: bold; color: {GAME_COLORS['accent_red']};")
+        timer_layout.addWidget(self.timer_label)
         timer_layout.addWidget(self.timer_display)
         timer_layout.addStretch()
         layout.addLayout(timer_layout)
         
         # Current RPM display - make it more prominent
         rpm_layout = QHBoxLayout()
-        rpm_label = QLabel("Current RPM:")
-        rpm_label.setStyleSheet(f"font-weight: bold; font-size: 13px; color: {GAME_COLORS['text_secondary']};")
+        self.rpm_label = QLabel("Current RPM:")
+        self.rpm_label.setStyleSheet(f"font-weight: bold; color: {GAME_COLORS['text_secondary']};")
         self.rpm_display = QLabel("N/A")
-        self.rpm_display.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {GAME_COLORS['accent_blue']}; background-color: {GAME_COLORS['bg_medium']}; padding: 5px 10px; border-radius: 5px;")
+        self.rpm_display.setStyleSheet(f"font-weight: bold; color: {GAME_COLORS['accent_blue']}; background-color: {GAME_COLORS['bg_medium']}; padding: 5px 10px; border-radius: 5px;")
         self.rpm_display.setMinimumWidth(100)
         self.rpm_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        rpm_layout.addWidget(rpm_label)
+        rpm_layout.addWidget(self.rpm_label)
         rpm_layout.addWidget(self.rpm_display)
         rpm_layout.addStretch()
         layout.addLayout(rpm_layout)
         
         # Fan speed slider - make it more readable
         slider_layout = QVBoxLayout()
-        slider_label = QLabel("Fan Speed:")
-        slider_label.setStyleSheet(f"font-weight: bold; font-size: 13px; color: {GAME_COLORS['text_secondary']};")
-        slider_layout.addWidget(slider_label)
+        self.slider_label = QLabel("Fan Speed:")
+        self.slider_label.setStyleSheet(f"font-weight: bold; color: {GAME_COLORS['text_secondary']};")
+        slider_layout.addWidget(self.slider_label)
         
         slider_row = QHBoxLayout()
         self.speed_slider = QSlider(Qt.Orientation.Horizontal)
@@ -119,7 +129,7 @@ class FanTestTile(QGroupBox):
         self.speed_label = QLabel("0%")
         self.speed_label.setMinimumWidth(70)
         self.speed_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.speed_label.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {GAME_COLORS['accent_orange']}; background-color: {GAME_COLORS['bg_medium']}; padding: 5px 10px; border-radius: 5px;")
+        self.speed_label.setStyleSheet(f"font-weight: bold; color: {GAME_COLORS['accent_orange']}; background-color: {GAME_COLORS['bg_medium']}; padding: 5px 10px; border-radius: 5px;")
         
         slider_row.addWidget(self.speed_slider)
         slider_row.addWidget(self.speed_label)
@@ -350,6 +360,55 @@ class FanTestTile(QGroupBox):
         else:
             self.rpm_display.setText("N/A")
     
+    def update_scaling(self):
+        """Update widget scaling based on window size."""
+        window = self.window()
+        if not window:
+            return
+        
+        scale = UIScaling.get_scale_factor(window)
+        
+        # Update checkbox font
+        if hasattr(self, 'test_mode_checkbox'):
+            checkbox_font = UIScaling.scale_font(self._base_checkbox_font_size, window, scale)
+            checkbox_font.setBold(True)
+            self.test_mode_checkbox.setFont(checkbox_font)
+        
+        # Update label fonts
+        label_attrs = ['timer_label', 'rpm_label', 'slider_label']
+        for attr in label_attrs:
+            if hasattr(self, attr):
+                label_widget = getattr(self, attr)
+                label_font = UIScaling.scale_font(self._base_label_font_size, window, scale)
+                label_font.setBold(True)
+                label_widget.setFont(label_font)
+        
+        # Update value fonts
+        if hasattr(self, 'timer_display'):
+            timer_font = UIScaling.scale_font(self._base_timer_font_size, window, scale)
+            timer_font.setBold(True)
+            self.timer_display.setFont(timer_font)
+        
+        if hasattr(self, 'rpm_display'):
+            rpm_font = UIScaling.scale_font(self._base_rpm_font_size, window, scale)
+            rpm_font.setBold(True)
+            self.rpm_display.setFont(rpm_font)
+        
+        if hasattr(self, 'speed_label'):
+            speed_font = UIScaling.scale_font(self._base_speed_font_size, window, scale)
+            speed_font.setBold(True)
+            self.speed_label.setFont(speed_font)
+        
+        # Update layout spacing
+        layout = self.layout()
+        if layout:
+            layout.setSpacing(UIScaling.scale_size(self._base_layout_spacing, window, scale))
+    
+    def resizeEvent(self, event):
+        """Handle resize to update scaling."""
+        super().resizeEvent(event)
+        self.update_scaling()
+    
     def cleanup(self):
         """Cleanup: restore original curve if test mode is active."""
         if self.test_mode_enabled:
@@ -367,8 +426,17 @@ class TestFansTab(QWidget):
         self.asusctl = asusctl
         self.fan_tiles: Dict[str, FanTestTile] = {}
         
+        # Base sizes for scaling
+        self._base_title_font_size = 20
+        self._base_label_font_size = 13
+        self._base_value_font_size = 18
+        self._base_rpm_font_size = 20
+        self._base_layout_margins = (20, 20, 20, 20)
+        self._base_layout_spacing = 20
+        
         self._init_ui()
         self._start_update_timer()
+        self.update_scaling()
     
     def _init_ui(self):
         """Initialize the UI."""
@@ -380,13 +448,9 @@ class TestFansTab(QWidget):
         self.setStyleSheet(GAME_STYLES['widget'])
         
         # Title
-        title = QLabel("Test Fans")
-        title_font = QFont()
-        title_font.setPointSize(20)
-        title_font.setBold(True)
-        title.setFont(title_font)
-        title.setStyleSheet(f"color: {GAME_COLORS['accent_blue']}; margin-bottom: 10px;")
-        layout.addWidget(title)
+        self.title_label = QLabel("Test Fans")
+        self.title_label.setStyleSheet(f"color: {GAME_COLORS['accent_blue']}; margin-bottom: 10px;")
+        layout.addWidget(self.title_label)
         
         # Instructions
         instructions = QLabel(
@@ -570,4 +634,35 @@ class TestFansTab(QWidget):
         """Handle close event - restore curves."""
         self.cleanup()
         super().closeEvent(event)
+    
+    def update_scaling(self):
+        """Update widget scaling based on window size."""
+        window = self.window()
+        if not window:
+            return
+        
+        scale = UIScaling.get_scale_factor(window)
+        
+        # Update title font
+        if hasattr(self, 'title_label'):
+            title_font = UIScaling.scale_font(self._base_title_font_size, window, scale)
+            title_font.setBold(True)
+            self.title_label.setFont(title_font)
+        
+        # Update layout margins and spacing
+        layout = self.layout()
+        if layout:
+            margins = tuple(UIScaling.scale_size(m, window, scale) for m in self._base_layout_margins)
+            layout.setContentsMargins(*margins)
+            layout.setSpacing(UIScaling.scale_size(self._base_layout_spacing, window, scale))
+        
+        # Update all fan tiles
+        for tile in self.fan_tiles.values():
+            if hasattr(tile, 'update_scaling'):
+                tile.update_scaling()
+    
+    def resizeEvent(self, event):
+        """Handle resize to update scaling."""
+        super().resizeEvent(event)
+        self.update_scaling()
 

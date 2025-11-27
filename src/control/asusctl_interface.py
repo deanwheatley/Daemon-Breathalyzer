@@ -207,7 +207,7 @@ class AsusctlInterface:
         return self._check_asusctl_available()
     
     def get_current_profile(self) -> Optional[Profile]:
-        """Get the current power profile."""
+        """Get the current active power profile."""
         try:
             result = subprocess.run(
                 ['asusctl', 'profile', '-p'],
@@ -217,17 +217,65 @@ class AsusctlInterface:
             )
             
             if result.returncode == 0:
-                output = result.stdout.strip().lower()
-                if 'balanced' in output:
-                    return Profile.BALANCED
-                elif 'quiet' in output:
-                    return Profile.QUIET
-                elif 'performance' in output:
+                output = result.stdout.strip()
+                # Look for "Active profile is X" line
+                for line in output.split('\n'):
+                    if 'active profile is' in line.lower():
+                        profile_name = line.split('is')[-1].strip().lower()
+                        if 'balanced' in profile_name:
+                            return Profile.BALANCED
+                        elif 'quiet' in profile_name:
+                            return Profile.QUIET
+                        elif 'performance' in profile_name:
+                            return Profile.PERFORMANCE
+                
+                # Fallback: check entire output
+                output_lower = output.lower()
+                if 'performance' in output_lower:
                     return Profile.PERFORMANCE
+                elif 'quiet' in output_lower:
+                    return Profile.QUIET
+                elif 'balanced' in output_lower:
+                    return Profile.BALANCED
         except Exception:
             pass
         
         return None
+    
+    def get_available_profiles(self) -> List[Profile]:
+        """Get list of available power profiles."""
+        return [Profile.BALANCED, Profile.QUIET, Profile.PERFORMANCE]
+    
+    def get_fan_curve(self, fan_name: str) -> Optional[List[Tuple[int, int]]]:
+        """Get current fan curve for a specific fan."""
+        current_profile = self.get_current_profile()
+        if not current_profile:
+            return None
+            
+        curves = self.get_fan_curves(current_profile)
+        curve = curves.get(fan_name.upper())
+        
+        if curve:
+            return [(p.temperature, p.fan_speed) for p in curve.points]
+        return None
+    
+    def apply_fan_curve(self, fan_name: str, curve_points: List[Tuple[int, int]]) -> Tuple[bool, str]:
+        """Apply a fan curve to the current profile."""
+        try:
+            # Convert points to FanCurve
+            points = [FanCurvePoint(temp, speed) for temp, speed in curve_points]
+            curve = FanCurve(points)
+            
+            # Get current profile
+            current_profile = self.get_current_profile()
+            if not current_profile:
+                return False, "Could not determine current profile"
+            
+            # Apply the curve
+            return self.set_fan_curve(current_profile, fan_name, curve)
+            
+        except Exception as e:
+            return False, str(e)
     
     def set_profile(self, profile: Profile) -> Tuple[bool, str]:
         """
@@ -344,21 +392,42 @@ class AsusctlInterface:
                 Profile.PERFORMANCE: 'Performance'
             }
             
-            curve_data = curve.to_asusctl_format()
+            # First ensure fan curves are enabled
+            enable_result = self.enable_fan_curves(profile, True)
+            if not enable_result[0]:
+                print(f"Warning: Could not enable fan curves: {enable_result[1]}")
             
+            # Convert curve to asusctl format
+            curve_data = curve.to_asusctl_format()
+            print(f"Applying curve for {fan_name}: {curve_data}")
+            
+            # Apply the curve
             result = subprocess.run(
                 [
                     'asusctl', 'fan-curve',
                     '--mod-profile', profile_map[profile],
-                    '--fan', fan_name,
+                    '--fan', fan_name.lower(),  # Use lowercase for asusctl
                     '--data', curve_data
                 ],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=10
             )
             
+            print(f"asusctl output: {result.stdout}")
+            if result.stderr:
+                print(f"asusctl error: {result.stderr}")
+            
             if result.returncode == 0:
+                # Verify the curve was applied by reading it back
+                applied_curves = self.get_fan_curves(profile)
+                applied_curve = applied_curves.get(fan_name)
+                
+                if applied_curve and self._curves_match(curve, applied_curve):
+                    print(f"✅ Curve successfully applied and verified for {fan_name}")
+                else:
+                    print(f"⚠️  Curve applied but verification failed for {fan_name}")
+                
                 # Save to persistent storage
                 if save_persistent:
                     try:
@@ -370,9 +439,22 @@ class AsusctlInterface:
                 
                 return True, f"Fan curve set for {fan_name}"
             else:
-                return False, result.stderr or result.stdout
+                error_msg = result.stderr or result.stdout or "Unknown error"
+                return False, f"asusctl failed: {error_msg}"
         except Exception as e:
             return False, str(e)
+    
+    def _curves_match(self, curve1: FanCurve, curve2: FanCurve) -> bool:
+        """Check if two curves match (for verification)."""
+        if not curve1 or not curve2:
+            return False
+        if len(curve1.points) != len(curve2.points):
+            return False
+        
+        for p1, p2 in zip(curve1.points, curve2.points):
+            if abs(p1.temperature - p2.temperature) > 1 or abs(p1.fan_speed - p2.fan_speed) > 1:
+                return False
+        return True
     
     def enable_fan_curves(self, profile: Profile, enabled: bool) -> Tuple[bool, str]:
         """
@@ -437,17 +519,8 @@ class AsusctlInterface:
             Tuple of (success: bool, message: str)
         """
         try:
-            # Create a temporary max speed curve - asusctl requires exactly 8 points
-            max_curve = FanCurve([
-                FanCurvePoint(30, 100),
-                FanCurvePoint(40, 100),
-                FanCurvePoint(50, 100),
-                FanCurvePoint(60, 100),
-                FanCurvePoint(70, 100),
-                FanCurvePoint(80, 100),
-                FanCurvePoint(85, 100),
-                FanCurvePoint(90, 100),
-            ])
+            # Use the max preset curve (already has 8 points)
+            max_curve = get_preset_curve('max')
             
             # Get current profile
             current_profile = self.get_current_profile() or Profile.BALANCED
@@ -491,7 +564,7 @@ class AsusctlInterface:
 # Preset fan curves
 def get_preset_curve(name: str) -> FanCurve:
     """
-    Get a preset fan curve.
+    Get a preset fan curve with exactly 8 points (required by asusctl).
     
     Available presets:
     - 'quiet' / 'silent': Low fan speeds, quiet operation
@@ -503,51 +576,83 @@ def get_preset_curve(name: str) -> FanCurve:
     presets = {
         'quiet': FanCurve([
             FanCurvePoint(30, 20),
+            FanCurvePoint(40, 25),
             FanCurvePoint(50, 30),
+            FanCurvePoint(60, 40),
             FanCurvePoint(70, 50),
+            FanCurvePoint(80, 60),
             FanCurvePoint(85, 70),
+            FanCurvePoint(90, 80),
         ]),
         'silent': FanCurve([
             FanCurvePoint(30, 15),
+            FanCurvePoint(40, 20),
             FanCurvePoint(50, 25),
+            FanCurvePoint(60, 35),
             FanCurvePoint(70, 45),
+            FanCurvePoint(80, 55),
             FanCurvePoint(85, 65),
+            FanCurvePoint(90, 75),
         ]),
         'balanced': FanCurve([
             FanCurvePoint(30, 30),
+            FanCurvePoint(40, 35),
             FanCurvePoint(50, 45),
+            FanCurvePoint(60, 55),
             FanCurvePoint(70, 65),
+            FanCurvePoint(80, 75),
             FanCurvePoint(85, 85),
+            FanCurvePoint(90, 95),
         ]),
         'performance': FanCurve([
             FanCurvePoint(30, 40),
+            FanCurvePoint(40, 50),
             FanCurvePoint(50, 60),
+            FanCurvePoint(60, 70),
             FanCurvePoint(70, 80),
+            FanCurvePoint(80, 90),
             FanCurvePoint(85, 100),
+            FanCurvePoint(90, 100),
         ]),
         'conservative': FanCurve([
             FanCurvePoint(30, 30),
+            FanCurvePoint(40, 40),
             FanCurvePoint(50, 60),
             FanCurvePoint(54, 100),  # 100% at ~60% utilization (54°C)
-            FanCurvePoint(85, 100),
+            FanCurvePoint(60, 100),
+            FanCurvePoint(70, 100),
+            FanCurvePoint(80, 100),
+            FanCurvePoint(90, 100),
         ]),
         'max': FanCurve([
             FanCurvePoint(30, 100),
+            FanCurvePoint(40, 100),
             FanCurvePoint(50, 100),
+            FanCurvePoint(60, 100),
             FanCurvePoint(70, 100),
+            FanCurvePoint(80, 100),
             FanCurvePoint(85, 100),
+            FanCurvePoint(90, 100),
         ]),
         'loudmouth': FanCurve([
-            FanCurvePoint(30, 100),  # Max at 30% load (startup)
+            FanCurvePoint(30, 100),  # Max at all temps
+            FanCurvePoint(40, 100),
             FanCurvePoint(50, 100),
+            FanCurvePoint(60, 100),
             FanCurvePoint(70, 100),
+            FanCurvePoint(80, 100),
             FanCurvePoint(85, 100),
+            FanCurvePoint(90, 100),
         ]),
         'shush': FanCurve([
             FanCurvePoint(30, 10),   # Very quiet
+            FanCurvePoint(40, 15),
             FanCurvePoint(50, 20),
+            FanCurvePoint(60, 30),
             FanCurvePoint(70, 40),
+            FanCurvePoint(80, 50),
             FanCurvePoint(85, 60),
+            FanCurvePoint(90, 70),
         ]),
     }
     

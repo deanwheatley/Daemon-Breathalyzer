@@ -7,15 +7,17 @@ Visual representation showing current position on fan curves, temperatures, RPM,
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGroupBox,
-    QGridLayout
+    QGridLayout, QComboBox, QPushButton, QMessageBox
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QFont, QPen, QBrush, QColor
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread, pyqtSignal as Signal
+from PyQt6.QtGui import QFont, QPen, QBrush, QColor, QMovie
 import pyqtgraph as pg
 import numpy as np
 
 from ..control.asusctl_interface import AsusctlInterface, Profile, FanCurve
 from ..monitoring.system_monitor import SystemMonitor
+from ..control.profile_manager import ProfileManager
+from ..control.curve_file_manager import CurveFileManager
 from .game_style_theme import GAME_COLORS, GAME_STYLES
 from .ui_scaling import UIScaling
 
@@ -28,11 +30,14 @@ class FanStatusWidget(QWidget):
         self.fan_name = fan_name.upper()
         self.monitor = monitor
         self.asusctl = asusctl
+        self.profile_manager = ProfileManager()
+        self.curve_manager = CurveFileManager()
         self.current_curve = None
         self.current_temp = None
         self.current_rpm = None
         self.current_load = None
         self.glow_layers = []  # Initialize glow layers list
+        self.applying_curve = False
         
         # Base sizes for scaling
         self._base_title_font_size = 16
@@ -43,7 +48,241 @@ class FanStatusWidget(QWidget):
         
         self._init_ui()
         self._load_curve()
+        self._populate_curve_combo()
+        self._connect_signals()
         self.update_scaling()
+    
+    def _connect_signals(self):
+        """Connect widget signals."""
+        self.curve_combo.currentTextChanged.connect(self._on_curve_selection_changed)
+    
+    def _on_curve_selection_changed(self):
+        """Handle curve selection change."""
+        selected = self.curve_combo.currentText()
+        current_active = self._get_current_active_curve_name()
+        
+        # Enable apply button only if selection is different from current
+        self.apply_btn.setEnabled(selected != current_active and selected != "")
+    
+    def _get_current_active_curve_name(self) -> str:
+        """Get the name of currently active curve."""
+        try:
+            current_profile = self.asusctl.get_current_profile() or Profile.BALANCED
+            
+            # Check persistent storage first
+            from ..control.fan_curve_persistence import FanCurvePersistence
+            persistence = FanCurvePersistence()
+            saved_curves = persistence.load_active_curves(current_profile)
+            active_curve = saved_curves.get(self.fan_name)
+            
+            if active_curve:
+                # Try to match with known curves
+                return self._match_curve_to_name(active_curve)
+            
+            # Fallback to profile name
+            return current_profile.value.capitalize()
+        except:
+            return "Balanced"
+    
+    def _match_curve_to_name(self, curve: FanCurve) -> str:
+        """Match a curve to its name in available options."""
+        if not curve or not curve.points:
+            return "Unknown"
+        
+        # Check built-in presets
+        from ..control.asusctl_interface import get_preset_curve
+        for preset in ['quiet', 'balanced', 'performance']:
+            try:
+                preset_curve = get_preset_curve(preset)
+                if self._curves_equal(curve, preset_curve):
+                    return preset.capitalize()
+            except:
+                continue
+        
+        # Check saved profiles
+        try:
+            profiles = self.profile_manager.list_profiles()
+            for profile_name in profiles:
+                profile = self.profile_manager.get_profile(profile_name)
+                if profile:
+                    profile_curve = profile.cpu_fan_curve if self.fan_name == "CPU" else profile.gpu_fan_curve
+                    if profile_curve and self._curves_equal(curve, profile_curve):
+                        return f"Profile: {profile_name}"
+        except:
+            pass
+        
+        # Check custom curves
+        try:
+            custom_curves = self.curve_manager.list_curves()
+            for curve_name in custom_curves:
+                custom_curve_data = self.curve_manager.load_curve(curve_name)
+                if custom_curve_data:
+                    # Convert to FanCurve for comparison
+                    from ..control.asusctl_interface import FanCurve, FanCurvePoint
+                    custom_curve = FanCurve([FanCurvePoint(t, s) for t, s in custom_curve_data.points])
+                    if self._curves_equal(curve, custom_curve):
+                        return f"Custom: {curve_name}"
+        except:
+            pass
+        
+        return "Custom Curve"
+    
+    def _curves_equal(self, curve1: FanCurve, curve2: FanCurve) -> bool:
+        """Check if two curves are equal."""
+        if not curve1 or not curve2:
+            return False
+        if len(curve1.points) != len(curve2.points):
+            return False
+        
+        points1 = sorted(curve1.points, key=lambda p: p.temperature)
+        points2 = sorted(curve2.points, key=lambda p: p.temperature)
+        
+        for p1, p2 in zip(points1, points2):
+            if p1.temperature != p2.temperature or p1.fan_speed != p2.fan_speed:
+                return False
+        return True
+    
+    def _populate_curve_combo(self):
+        """Populate the curve selection combo box."""
+        self.curve_combo.clear()
+        
+        # Built-in presets
+        presets = ["Quiet", "Balanced", "Performance"]
+        for preset in presets:
+            self.curve_combo.addItem(preset)
+        
+        # Add separator (visual only)
+        self.curve_combo.insertSeparator(self.curve_combo.count())
+        
+        # Saved profiles
+        try:
+            profiles = self.profile_manager.list_profiles()
+            for profile_name in profiles:
+                profile = self.profile_manager.get_profile(profile_name)
+                if profile:
+                    # Check if profile has curve for this fan
+                    has_curve = False
+                    if self.fan_name == "CPU" and profile.cpu_fan_curve:
+                        has_curve = True
+                    elif self.fan_name == "GPU" and profile.gpu_fan_curve:
+                        has_curve = True
+                    
+                    if has_curve:
+                        self.curve_combo.addItem(f"Profile: {profile_name}")
+        except Exception as e:
+            print(f"Error loading profiles: {e}")
+        
+        # Add separator if we have profiles
+        if self.curve_combo.count() > len(presets) + 1:
+            self.curve_combo.insertSeparator(self.curve_combo.count())
+        
+        # Custom curves from Fan Curve Builder
+        try:
+            custom_curves = self.curve_manager.list_curves()
+            for curve_name in custom_curves:
+                # Validate curve before adding
+                curve_data = self.curve_manager.load_curve(curve_name)
+                if curve_data and self._validate_curve_data(curve_data):
+                    self.curve_combo.addItem(f"Custom: {curve_name}")
+        except Exception as e:
+            print(f"Error loading custom curves: {e}")
+        
+        # Set current selection
+        current_active = self._get_current_active_curve_name()
+        index = self.curve_combo.findText(current_active)
+        if index >= 0:
+            self.curve_combo.setCurrentIndex(index)
+    
+    def _validate_curve_data(self, curve_data) -> bool:
+        """Validate curve data before allowing selection."""
+        try:
+            if not curve_data or not curve_data.points:
+                return False
+            
+            # Check minimum points
+            if len(curve_data.points) < 2:
+                return False
+            
+            # Check temperature range and monotonic increase
+            temps = [p[0] for p in curve_data.points]
+            speeds = [p[1] for p in curve_data.points]
+            
+            # Validate ranges
+            for temp, speed in curve_data.points:
+                if not (30 <= temp <= 90) or not (0 <= speed <= 100):
+                    return False
+            
+            # Check monotonic temperature increase
+            sorted_temps = sorted(temps)
+            if temps != sorted_temps:
+                return False
+            
+            return True
+        except:
+            return False
+    
+    def _apply_selected_curve(self):
+        """Apply the selected curve."""
+        if self.applying_curve:
+            return
+        
+        selected = self.curve_combo.currentText()
+        if not selected:
+            return
+        
+        self.applying_curve = True
+        self.apply_btn.setEnabled(False)
+        self.apply_btn.setText("Applying...")
+        
+        try:
+            curve_to_apply = None
+            
+            # Parse selection type
+            if selected in ["Quiet", "Balanced", "Performance"]:
+                # Built-in preset
+                from ..control.asusctl_interface import get_preset_curve
+                curve_to_apply = get_preset_curve(selected.lower())
+            
+            elif selected.startswith("Profile: "):
+                # Saved profile
+                profile_name = selected[9:]  # Remove "Profile: " prefix
+                profile = self.profile_manager.get_profile(profile_name)
+                if profile:
+                    curve_to_apply = profile.cpu_fan_curve if self.fan_name == "CPU" else profile.gpu_fan_curve
+            
+            elif selected.startswith("Custom: "):
+                # Custom curve
+                curve_name = selected[8:]  # Remove "Custom: " prefix
+                curve_data = self.curve_manager.load_curve(curve_name)
+                if curve_data:
+                    # Convert to FanCurve
+                    from ..control.asusctl_interface import FanCurve, FanCurvePoint
+                    curve_to_apply = FanCurve([FanCurvePoint(t, s) for t, s in curve_data.points])
+            
+            if curve_to_apply:
+                # Apply the curve
+                current_profile = self.asusctl.get_current_profile() or Profile.BALANCED
+                success, message = self.asusctl.set_fan_curve(
+                    current_profile, self.fan_name, curve_to_apply, save_persistent=True
+                )
+                
+                if success:
+                    QMessageBox.information(self, "Success", f"Applied {selected} to {self.fan_name} fan")
+                    # Refresh curve display
+                    self._load_curve()
+                    self._populate_curve_combo()  # Refresh to show new active curve
+                else:
+                    QMessageBox.warning(self, "Error", f"Failed to apply curve: {message}")
+            else:
+                QMessageBox.warning(self, "Error", "Failed to load selected curve")
+        
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error applying curve: {str(e)}")
+        
+        finally:
+            self.applying_curve = False
+            self.apply_btn.setText("Apply")
+            self._on_curve_selection_changed()  # Re-enable if needed
     
     def _init_ui(self):
         """Initialize the UI."""
@@ -51,10 +290,50 @@ class FanStatusWidget(QWidget):
         layout.setSpacing(15)
         layout.setContentsMargins(20, 20, 20, 20)
         
-        # Title
+        # Header with title and curve selection
+        header_layout = QHBoxLayout()
+        
         self.title_label = QLabel(f"{self.fan_name} Fan Status")
         self.title_label.setStyleSheet(f"color: {GAME_COLORS['accent_blue']}; margin-bottom: 10px;")
-        layout.addWidget(self.title_label)
+        header_layout.addWidget(self.title_label)
+        
+        header_layout.addStretch()
+        
+        # Curve selection combo box
+        curve_label = QLabel("Apply Curve:")
+        curve_label.setStyleSheet(f"color: {GAME_COLORS['text_secondary']}; margin-right: 8px;")
+        header_layout.addWidget(curve_label)
+        
+        self.curve_combo = QComboBox()
+        self.curve_combo.setMinimumWidth(180)
+        self.curve_combo.setStyleSheet(GAME_STYLES['combobox'])
+        header_layout.addWidget(self.curve_combo)
+        
+        # Apply button
+        self.apply_btn = QPushButton("Apply")
+        self.apply_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {GAME_COLORS['accent_green']};
+                color: {GAME_COLORS['text_primary']};
+                border: 2px solid {GAME_COLORS['accent_green']};
+                padding: 6px 12px;
+                border-radius: 6px;
+                font-weight: bold;
+                min-width: 60px;
+            }}
+            QPushButton:hover {{
+            }}
+            QPushButton:disabled {{
+                background-color: {GAME_COLORS['bg_medium']};
+                color: {GAME_COLORS['text_secondary']};
+                border: 2px solid {GAME_COLORS['border']};
+            }}
+        """)
+        self.apply_btn.clicked.connect(self._apply_selected_curve)
+        self.apply_btn.setEnabled(False)
+        header_layout.addWidget(self.apply_btn)
+        
+        layout.addLayout(header_layout)
         
         # Main content area - horizontal split
         content_layout = QHBoxLayout()
@@ -455,6 +734,18 @@ class FanStatusWidget(QWidget):
                 # Update curve widget title with profile name
                 if hasattr(self, 'curve_widget'):
                     self._update_curve_widget_title()
+                
+                # Refresh combo box selection
+                if hasattr(self, 'curve_combo'):
+                    current_active = self._get_current_active_curve_name()
+                    current_selection = self.curve_combo.currentText()
+                    if current_selection != current_active:
+                        index = self.curve_combo.findText(current_active)
+                        if index >= 0:
+                            self.curve_combo.blockSignals(True)
+                            self.curve_combo.setCurrentIndex(index)
+                            self.curve_combo.blockSignals(False)
+                        self._on_curve_selection_changed()
         except Exception as e:
             print(f"Error reloading curve for {self.fan_name}: {e}")
     
@@ -502,47 +793,6 @@ class FanStatusWidget(QWidget):
         # Always update the horizontal line and intersection marker with current fan speed
         # This ensures the line updates even if the curve hasn't changed
         self._update_current_position_marker()
-    
-    def update_scaling(self):
-        """Update widget scaling based on window size."""
-        window = self.window()
-        if not window:
-            return
-        
-        scale = UIScaling.get_scale_factor(window)
-        
-        # Update title font
-        if hasattr(self, 'title_label'):
-            title_font = UIScaling.scale_font(self._base_title_font_size, window, scale)
-            title_font.setBold(True)
-            self.title_label.setFont(title_font)
-        
-        # Update value fonts
-        for value_widget in [self.temp_value, self.rpm_value, self.percent_value, 
-                            self.load_value, self.expected_value]:
-            if hasattr(value_widget, 'setFont'):
-                value_font = UIScaling.scale_font(self._base_value_font_size, window, scale)
-                value_font.setBold(True)
-                value_widget.setFont(value_font)
-        
-        # Update label fonts
-        for label_widget in [self.temp_label, self.rpm_label, self.percent_label, 
-                            self.load_label, self.expected_label]:
-            if hasattr(label_widget, 'setFont'):
-                label_font = UIScaling.scale_font(self._base_label_font_size, window, scale)
-                label_widget.setFont(label_font)
-        
-        # Update layout margins and spacing
-        layout = self.layout()
-        if layout:
-            margins = tuple(UIScaling.scale_size(m, window, scale) for m in self._base_layout_margins)
-            layout.setContentsMargins(*margins)
-            layout.setSpacing(UIScaling.scale_size(self._base_layout_spacing, window, scale))
-    
-    def resizeEvent(self, event):
-        """Handle resize to update scaling."""
-        super().resizeEvent(event)
-        self.update_scaling()
     
     def _update_curve_widget_title(self):
         """Update the curve widget title with current profile name."""

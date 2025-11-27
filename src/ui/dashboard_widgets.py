@@ -191,12 +191,6 @@ class GraphWidget(QWidget):
         """Handle resize to update scaling."""
         super().resizeEvent(event)
         self.update_scaling()
-        legend.setPen(pg.mkPen(color=GAME_COLORS['border'], width=1))
-        legend.setBrush(pg.mkBrush(color=pg.mkColor(GAME_COLORS['bg_card'] + 'F0')))  # Semi-transparent
-        # Legend text color
-        for item in legend.items:
-            if hasattr(item, 'label'):
-                item.label.setColor(pg.mkColor(GAME_COLORS['text_primary']))
     
     def update_data(self, history: dict):
         """Update graph with new historical data."""

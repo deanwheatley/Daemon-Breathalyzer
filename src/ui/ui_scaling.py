@@ -179,3 +179,4 @@ class ScalableWidget:
         # Update scaling when widget or window resizes
         self.update_scaling()
 
+

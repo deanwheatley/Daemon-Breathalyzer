@@ -144,7 +144,6 @@ class FanCurveEditor(QWidget):
                     background-color: {GAME_COLORS['accent_blue']};
                     color: {GAME_COLORS['text_primary']};
                     border: 2px solid {GAME_COLORS['accent_blue']};
-                    box-shadow: 0 0 15px {GAME_COLORS['accent_blue']};
                 }}
             """)
             self.fan_button_group.addButton(btn)
@@ -245,7 +244,6 @@ class FanCurveEditor(QWidget):
                 font-weight: bold;
             }}
             QPushButton:hover {{
-                box-shadow: 0 0 15px {GAME_COLORS['accent_green']};
             }}
         """)
         
@@ -290,7 +288,6 @@ class FanCurveEditor(QWidget):
                 font-size: 12pt;
             }}
             QPushButton:hover {{
-                box-shadow: 0 0 20px {GAME_COLORS['accent_green']};
             }}
         """)
         save_layout.addWidget(self.save_profile_btn)
@@ -367,7 +364,6 @@ class FanCurveEditor(QWidget):
                 font-weight: bold;
             }}
             QPushButton:hover {{
-                box-shadow: 0 0 15px {GAME_COLORS['accent_green']};
             }}
         """)
         add_point_btn.clicked.connect(self.add_point_from_inputs)

@@ -55,7 +55,6 @@ GAME_STYLES = {
             color: {GAME_COLORS['accent_blue']};
             font-weight: bold;
             border-bottom: 2px solid {GAME_COLORS['accent_blue']};
-            box-shadow: 0 0 10px {GAME_COLORS['accent_blue']};
         }}
         QTabBar::tab:hover:!selected {{
             background: {GAME_COLORS['bg_glow']};
@@ -71,7 +70,6 @@ GAME_STYLES = {
         }}
         QWidget:hover {{
             border: 2px solid {GAME_COLORS['accent_blue']};
-            box-shadow: 0 0 15px {GAME_COLORS['accent_blue']};
         }}
     """,
     
@@ -86,7 +84,6 @@ GAME_STYLES = {
         }}
         QPushButton:hover {{
             background-color: {GAME_COLORS['accent_blue']};
-            box-shadow: 0 0 15px {GAME_COLORS['accent_blue']};
         }}
         QPushButton:pressed {{
             background-color: {GAME_COLORS['accent_cyan']};

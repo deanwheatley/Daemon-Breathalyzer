@@ -9,6 +9,7 @@ import subprocess
 import sys
 import importlib
 import shutil
+import re
 from typing import Dict, List, Tuple, Optional
 from enum import Enum
 
@@ -113,14 +114,25 @@ class DependencyChecker:
                 install_instructions="pip install PyYAML"
             ),
             
-            # System Commands
+            # Hardware Control - ASUS
+            Dependency(
+                name="asusctl",
+                system_command="asusctl",
+                description="ASUS laptop control utility (required for ASUS fan control)",
+                install_instructions="See: https://asus-linux.org/asusctl/",
+                is_optional=True
+            ),
+            
+            # GPU Drivers and Tools
             Dependency(
                 name="nvidia-smi",
                 system_command="nvidia-smi",
-                description="NVIDIA GPU monitoring tool (optional - for GPU metrics)",
-                install_instructions="Install NVIDIA drivers from: https://www.nvidia.com/drivers",
+                description="NVIDIA GPU monitoring tool (optional - for NVIDIA GPU metrics)",
+                install_instructions="sudo apt install nvidia-driver-535 nvidia-utils-535",
                 is_optional=True
             ),
+            
+            # Hardware Sensors
             Dependency(
                 name="sensors",
                 system_command="sensors",
@@ -128,12 +140,55 @@ class DependencyChecker:
                 install_instructions="sudo apt install lm-sensors && sudo sensors-detect",
                 is_optional=True
             ),
+            
+            # Gaming and FPS Monitoring
             Dependency(
-                name="asusctl",
-                system_command="asusctl",
-                description="ASUS laptop control utility (required for fan control)",
-                install_instructions="See: https://asus-linux.org/asusctl/",
-                is_optional=False
+                name="MangoHud",
+                system_command="mangohud",
+                description="Gaming overlay for FPS monitoring (optional - enables accurate FPS detection)",
+                install_instructions="sudo apt install mangohud",
+                is_optional=True
+            ),
+            
+            # Additional Hardware Support
+            Dependency(
+                name="dmidecode",
+                system_command="dmidecode",
+                description="Hardware information tool (optional - for motherboard detection)",
+                install_instructions="sudo apt install dmidecode",
+                is_optional=True
+            ),
+            Dependency(
+                name="lspci",
+                system_command="lspci",
+                description="PCI device listing tool (optional - for hardware detection)",
+                install_instructions="sudo apt install pciutils",
+                is_optional=True
+            ),
+            
+            # Fan Control Alternatives
+            Dependency(
+                name="fancontrol",
+                system_command="fancontrol",
+                description="Generic PWM fan control (optional - alternative to asusctl)",
+                install_instructions="sudo apt install fancontrol",
+                is_optional=True
+            ),
+            
+            # Additional Monitoring Tools
+            Dependency(
+                name="radeontop",
+                system_command="radeontop",
+                description="AMD GPU monitoring tool (optional - for AMD GPU metrics)",
+                install_instructions="sudo apt install radeontop",
+                is_optional=True
+            ),
+            Dependency(
+                name="intel_gpu_top",
+                system_command="intel_gpu_top",
+                description="Intel GPU monitoring tool (optional - for Intel GPU metrics)",
+                install_instructions="sudo apt install intel-gpu-tools",
+                is_optional=True
             ),
         ]
         
@@ -286,20 +341,68 @@ class DependencyChecker:
             instructions.append(f"\n**Detailed instructions:**")
             instructions.append(f"1. Visit: https://asus-linux.org/asusctl/")
             instructions.append(f"2. Follow the installation guide for your distribution")
-            instructions.append(f"3. Ensure the asusd service is running: `sudo systemctl enable --now asusd`\n")
+            instructions.append(f"3. Ensure the asusd service is running: `sudo systemctl enable --now asusd`")
+            instructions.append(f"4. Test with: `asusctl --version`\n")
         elif dep.name == "nvidia-smi":
-            instructions.append(f"\n**Note:**")
-            instructions.append(f"- Install NVIDIA drivers from: https://www.nvidia.com/drivers")
-            instructions.append(f"- Or use your distribution's package manager:")
-            instructions.append(f"  - Ubuntu/Debian: `sudo apt install nvidia-driver-<version>`")
-            instructions.append(f"  - Arch: `sudo pacman -S nvidia`\n")
+            instructions.append(f"\n**NVIDIA Driver Installation:**")
+            instructions.append(f"- Recommended: `sudo apt install nvidia-driver-535 nvidia-utils-535`")
+            instructions.append(f"- Alternative: Download from https://www.nvidia.com/drivers")
+            instructions.append(f"- Verify with: `nvidia-smi`")
+            instructions.append(f"- Reboot after installation\n")
         elif dep.name == "sensors":
-            instructions.append(f"\n**Setup steps:**")
+            instructions.append(f"\n**Hardware Sensors Setup:**")
             instructions.append(f"1. Install: `sudo apt install lm-sensors`")
             instructions.append(f"2. Detect sensors: `sudo sensors-detect` (answer yes to all)")
-            instructions.append(f"3. Test: `sensors`\n")
+            instructions.append(f"3. Test: `sensors`")
+            instructions.append(f"4. May require reboot for full functionality\n")
+        elif dep.name == "MangoHud":
+            instructions.append(f"\n**Gaming FPS Monitoring:**")
+            instructions.append(f"1. Install: `sudo apt install mangohud`")
+            instructions.append(f"2. Run games with: `mangohud %command%` (Steam) or `mangohud <game>`")
+            instructions.append(f"3. FPS data will be automatically detected by the application")
+            instructions.append(f"4. Configure in ~/.config/MangoHud/MangoHud.conf if needed\n")
+        elif dep.name == "fancontrol":
+            instructions.append(f"\n**Generic Fan Control Setup:**")
+            instructions.append(f"1. Install: `sudo apt install fancontrol`")
+            instructions.append(f"2. Configure: `sudo pwmconfig`")
+            instructions.append(f"3. Enable service: `sudo systemctl enable fancontrol`")
+            instructions.append(f"4. Alternative to asusctl for non-ASUS systems\n")
+        elif dep.name in ["radeontop", "intel_gpu_top"]:
+            instructions.append(f"\n**GPU Monitoring:**")
+            instructions.append(f"- Provides detailed GPU usage and temperature monitoring")
+            instructions.append(f"- Run with: `{dep.system_command}`")
+            instructions.append(f"- May require adding user to video group: `sudo usermod -a -G video $USER`\n")
         
         return "\n".join(instructions)
+
+
+def detect_hardware_specific_dependencies() -> List[str]:
+    """Detect hardware-specific dependencies that should be installed."""
+    additional_deps = []
+    
+    try:
+        # Check for NVIDIA GPU
+        result = subprocess.run(['lspci', '-nn'], capture_output=True, text=True)
+        if result.returncode == 0:
+            if 'NVIDIA' in result.stdout or 'GeForce' in result.stdout:
+                additional_deps.extend(['nvidia-driver-535', 'nvidia-utils-535'])
+            if 'AMD' in result.stdout and 'Radeon' in result.stdout:
+                additional_deps.extend(['mesa-vulkan-drivers', 'radeontop'])
+            if 'Intel' in result.stdout and ('VGA' in result.stdout or '3D' in result.stdout):
+                additional_deps.extend(['intel-media-va-driver', 'intel-gpu-tools'])
+        
+        # Check for ASUS motherboard
+        result = subprocess.run(['sudo', 'dmidecode', '-t', 'baseboard'], 
+                              capture_output=True, text=True)
+        if result.returncode == 0 and 'ASUS' in result.stdout.upper():
+            if not shutil.which('asusctl'):
+                print("⚠️  ASUS hardware detected but asusctl not installed")
+                print("   Visit: https://asus-linux.org/asusctl/")
+    
+    except Exception:
+        pass  # Hardware detection failed, continue without additional deps
+    
+    return additional_deps
 
 
 # Convenience function for checking dependencies

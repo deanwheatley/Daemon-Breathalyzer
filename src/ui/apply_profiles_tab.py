@@ -204,7 +204,6 @@ class ApplyProfilesTab(QWidget):
                 min-height: 50px;
             }}
             QPushButton:hover {{
-                box-shadow: 0 0 20px {GAME_COLORS['accent_green']};
                 background-color: #00ff99;
             }}
             QPushButton:pressed {{

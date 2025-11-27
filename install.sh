@@ -146,22 +146,46 @@ echo "🔧 Activating virtual environment..."
 source venv/bin/activate
 
 # Install dependencies
-echo "📥 Installing dependencies..."
+echo "📥 Installing Python dependencies..."
 pip install -q --upgrade pip
+
+# Install critical packages first
+echo "  Installing critical packages..."
+CRITICAL_PACKAGES=("PyQt6" "PyQtGraph" "psutil" "numpy" "PyYAML")
+for pkg in "${CRITICAL_PACKAGES[@]}"; do
+    echo "    Installing $pkg..."
+    if ! pip install -q "$pkg"; then
+        echo "    ⚠️  Failed to install $pkg, trying with --user flag..."
+        if ! pip install -q --user "$pkg"; then
+            echo "    ❌ Failed to install $pkg with both methods"
+        else
+            echo "    ✅ Installed $pkg with --user flag"
+        fi
+    else
+        echo "    ✅ Installed $pkg"
+    fi
+done
+
+# Install remaining dependencies from requirements.txt
+echo "  Installing remaining dependencies from requirements.txt..."
 if ! pip install -q -r requirements.txt; then
-    echo "❌ Error: Failed to install some dependencies."
-    echo ""
-    echo "Please check the error messages above and ensure:"
-    echo "  1. You have internet connectivity"
-    echo "  2. pip is up to date"
-    echo ""
-    echo "You can try installing manually:"
-    echo "  source venv/bin/activate"
-    echo "  pip install -r requirements.txt"
-    exit 1
+    echo "⚠️  Some dependencies from requirements.txt failed to install."
+    echo "   Trying individual installation..."
+    
+    # Try installing each line individually
+    while IFS= read -r line; do
+        # Skip empty lines and comments
+        if [[ -n "$line" && ! "$line" =~ ^[[:space:]]*# ]]; then
+            pkg_name=$(echo "$line" | cut -d'=' -f1 | cut -d'>' -f1 | cut -d'<' -f1 | cut -d'!' -f1)
+            echo "    Installing $pkg_name..."
+            if ! pip install -q "$line"; then
+                echo "    ⚠️  Failed to install $pkg_name"
+            fi
+        fi
+    done < requirements.txt
 fi
 
-echo "✅ Dependencies installed"
+echo "✅ Python dependencies installation completed"
 echo ""
 
 # Verify critical Python libraries are installed
@@ -175,6 +199,7 @@ CRITICAL_LIBS=(
     "PyQtGraph:pyqtgraph:pyqtgraph"
     "psutil:psutil:psutil"
     "numpy:numpy:numpy"
+    "PyYAML:yaml:PyYAML"
 )
 
 # Use venv Python and pip if available, otherwise system Python
@@ -203,35 +228,58 @@ if [ ${#MISSING_LIBS[@]} -gt 0 ]; then
     echo ""
     echo "⚠️  Some critical libraries are missing: ${MISSING_LIBS[*]}"
     echo ""
-    echo "Attempting to install missing libraries..."
+    echo "Attempting to install missing libraries with multiple methods..."
     for pkg in "${MISSING_LIBS[@]}"; do
         echo "  Installing $pkg..."
+        
+        # Try multiple installation methods
         if "$PIP_CMD" install -q "$pkg" 2>/dev/null; then
             echo "    ✅ Successfully installed $pkg"
+        elif "$PIP_CMD" install -q --user "$pkg" 2>/dev/null; then
+            echo "    ✅ Successfully installed $pkg with --user flag"
+        elif "$PIP_CMD" install -q --force-reinstall "$pkg" 2>/dev/null; then
+            echo "    ✅ Successfully reinstalled $pkg"
         else
-            echo "    ⚠️  Failed to install $pkg"
+            echo "    ⚠️  Failed to install $pkg with all methods"
+            
+            # For PyQt6, try alternative installation
+            if [[ "$pkg" == "PyQt6" ]]; then
+                echo "    🔄 Trying PyQt6 alternative installation..."
+                if "$PIP_CMD" install -q --index-url https://pypi.org/simple/ PyQt6 2>/dev/null; then
+                    echo "    ✅ PyQt6 installed via alternative method"
+                fi
+            fi
         fi
     done
     
     # Re-check using import names with venv Python
+    echo "  🔍 Re-verifying installations..."
     STILL_MISSING=()
     for lib_entry in "${CRITICAL_LIBS[@]}"; do
         IFS=':' read -r display_name import_name pkg_name <<< "$lib_entry"
         if ! "$PYTHON_CMD" -c "import ${import_name}" 2>/dev/null; then
             STILL_MISSING+=("$pkg_name")
+            echo "    ❌ $display_name: Still missing"
+        else
+            echo "    ✅ $display_name: Now available"
         fi
     done
     
     if [ ${#STILL_MISSING[@]} -gt 0 ]; then
         echo ""
-        echo "❌ Warning: Some libraries could not be installed: ${STILL_MISSING[*]}"
+        echo "❌ Warning: Some critical libraries could not be installed: ${STILL_MISSING[*]}"
         echo "   The application may not work correctly."
-        echo "   Please install them manually:"
+        echo "   Manual installation commands:"
         echo "   source venv/bin/activate"
-        echo "   pip install ${STILL_MISSING[*]}"
+        for pkg in "${STILL_MISSING[@]}"; do
+            echo "   pip install $pkg"
+        done
+        echo ""
+        echo "   If PyQt6 fails, try:"
+        echo "   sudo apt install python3-pyqt6 python3-pyqt6-dev"
         echo ""
     else
-        echo "✅ All critical libraries are now installed"
+        echo "✅ All critical libraries are now installed and verified"
     fi
 else
     echo "✅ All critical libraries verified"
@@ -242,7 +290,7 @@ echo ""
 echo "🔍 Checking Qt6 system dependencies..."
 MISSING_PACKAGES=()
 
-# Required Qt6 XCB libraries
+# Required Qt6 XCB libraries and Python packages
 QT_PACKAGES=(
     "libxcb-cursor0"
     "libxcb-xinerama0"
@@ -260,6 +308,25 @@ QT_PACKAGES=(
     "libegl1"
     "libgl1"
     "libxkbcommon-x11-0"
+    "libxcb1"
+    "libxcb-glx0"
+    "libxcb-shm0"
+    "python3-pyqt6"
+    "python3-pyqt6-dev"
+    "python3-numpy"
+    "python3-yaml"
+)
+
+# Generic fan control packages for non-ASUS laptops
+FAN_CONTROL_PACKAGES=(
+    "lm-sensors"
+    "fancontrol"
+    "i8kutils"
+)
+
+# Gaming and monitoring packages
+GAMING_PACKAGES=(
+    "mangohud"
 )
 
 # Optional but recommended libraries
@@ -270,8 +337,23 @@ OPTIONAL_PACKAGES=(
 
 # Check which packages are missing
 for package in "${QT_PACKAGES[@]}"; do
-    if ! dpkg -l 2>/dev/null | grep -q "^ii.*${package}"; then
+    if ! dpkg -l 2>/dev/null | grep -q "^ii.*${package}" && ! dpkg -l 2>/dev/null | grep -q "^ii  ${package}"; then
         MISSING_PACKAGES+=("$package")
+    fi
+done
+
+# Check fan control packages
+for package in "${FAN_CONTROL_PACKAGES[@]}"; do
+    if ! dpkg -l 2>/dev/null | grep -q "^ii.*${package}" && ! dpkg -l 2>/dev/null | grep -q "^ii  ${package}"; then
+        MISSING_PACKAGES+=("$package")
+    fi
+done
+
+# Check gaming packages
+MISSING_GAMING=()
+for package in "${GAMING_PACKAGES[@]}"; do
+    if ! dpkg -l 2>/dev/null | grep -q "^ii.*${package}"; then
+        MISSING_GAMING+=("$package")
     fi
 done
 
@@ -285,20 +367,87 @@ done
 
 # Install missing packages
 if [ ${#MISSING_PACKAGES[@]} -gt 0 ]; then
-    echo "📦 Installing missing Qt6 dependencies..."
-    echo "   Packages to install: ${MISSING_PACKAGES[*]}"
+    echo "📦 Installing system dependencies..."
+    echo "   Packages: ${MISSING_PACKAGES[*]}"
+    echo ""
+    echo "   ⚠️  This requires sudo access. Please enter your password when prompted."
+    echo ""
     
+    # Update package list first
+    echo "   Updating package list..."
+    sudo apt update -qq || echo "   ⚠️  Update had issues (continuing)"
+    
+    echo "   Installing packages..."
     if sudo apt install -y "${MISSING_PACKAGES[@]}"; then
-        echo "✅ All Qt6 dependencies installed successfully"
+        echo "✅ All system dependencies installed successfully"
+        
+        # Setup sensors for Dell/generic laptops
+        if ! command -v asusctl >/dev/null 2>&1; then
+            echo ""
+            echo "🔧 Setting up fan control for non-ASUS laptop..."
+            if command -v sensors-detect >/dev/null 2>&1; then
+                echo "   Running sensors-detect (answer YES to all)..."
+                echo "   This detects your hardware sensors."
+                sudo sensors-detect --auto || echo "   ⚠️  Sensor detection had issues"
+            fi
+            
+            if command -v pwmconfig >/dev/null 2>&1; then
+                echo ""
+                echo "   💡 To configure fan control, run: sudo pwmconfig"
+                echo "   Then enable the service: sudo systemctl enable fancontrol"
+            fi
+        fi
+        
+        # If we installed system PyQt6, we may need to ensure it's accessible in venv
+        if [[ " ${MISSING_PACKAGES[*]} " =~ " python3-pyqt6 " ]]; then
+            echo "   🔗 Linking system PyQt6 to virtual environment..."
+            SITE_PACKAGES_DIR="$SCRIPT_DIR/venv/lib/python*/site-packages"
+            SYSTEM_PYQT6="/usr/lib/python3/dist-packages/PyQt6"
+            
+            if [ -d "$SYSTEM_PYQT6" ] && [ -d $SITE_PACKAGES_DIR ]; then
+                for site_dir in $SITE_PACKAGES_DIR; do
+                    if [ ! -e "$site_dir/PyQt6" ]; then
+                        ln -sf "$SYSTEM_PYQT6" "$site_dir/PyQt6" 2>/dev/null || true
+                        echo "     ✅ Linked PyQt6 to $site_dir"
+                    fi
+                done
+            fi
+        fi
     else
-        echo "⚠️  Warning: Failed to install some Qt6 dependencies."
+        echo "⚠️  Warning: Failed to install some system dependencies."
         echo "   Missing packages: ${MISSING_PACKAGES[*]}"
         echo "   You may need to install them manually:"
         echo "   sudo apt install ${MISSING_PACKAGES[*]}"
     fi
     echo ""
 else
-    echo "✅ All Qt6 system dependencies are already installed"
+    echo "✅ All system dependencies are already installed"
+    
+    # Still setup sensors if needed
+    if ! command -v asusctl >/dev/null 2>&1 && command -v sensors-detect >/dev/null 2>&1; then
+        echo ""
+        echo "🔧 Configuring sensors for fan monitoring..."
+        sudo sensors-detect --auto 2>/dev/null || true
+    fi
+    echo ""
+fi
+
+# Install gaming packages (MangoHud for FPS monitoring)
+if [ ${#MISSING_GAMING[@]} -gt 0 ]; then
+    echo "🎮 Installing gaming monitoring packages..."
+    echo "   Packages: ${MISSING_GAMING[*]}"
+    echo "   - mangohud: Accurate FPS monitoring for games"
+    
+    if sudo apt install -y "${MISSING_GAMING[@]}"; then
+        echo "✅ Gaming packages installed successfully"
+    else
+        echo "⚠️  Warning: Failed to install gaming packages."
+        echo "   FPS monitoring will use estimation instead of accurate readings."
+        echo "   You can install manually: sudo apt install ${MISSING_GAMING[*]}"
+    fi
+    echo ""
+else
+    echo "✅ Gaming monitoring packages already installed"
     echo ""
 fi
 
@@ -307,6 +456,7 @@ if [ ${#MISSING_OPTIONAL[@]} -gt 0 ]; then
     echo "💡 Optional packages available:"
     echo "   Packages: ${MISSING_OPTIONAL[*]}"
     echo "   These can improve sensor readings and system monitoring."
+    echo "   - lm-sensors: Better temperature monitoring"
     read -p "   Install optional packages? (y/N): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -436,6 +586,7 @@ echo "All dependencies have been installed:"
 echo "  ✅ Python virtual environment"
 echo "  ✅ Python packages (PyQt6, PyQtGraph, etc.)"
 echo "  ✅ Qt6 system libraries (XCB, OpenGL, etc.)"
+echo "  ✅ MangoHud for accurate FPS monitoring"
 echo ""
 echo "The application has been installed and added to your application menu."
 echo ""

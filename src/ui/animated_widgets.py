@@ -243,27 +243,43 @@ class AnimatedIcon(QWidget):
         self.icon_path = icon_path
         self._rotation_angle = 0.0  # Private attribute to avoid recursion
         self._scale_factor = 1.0    # Private attribute to avoid recursion
+        self._glow_intensity = 0.5  # Glow intensity for neon pulsation
+        
+        # Fan speed tracking (0-100% or RPM)
+        self.cpu_fan_rpm = 0
+        self.gpu_fan_rpm = 0
+        self.max_rpm = 7000  # Maximum expected RPM for percentage calculation
+        
         self._setup_animations()
     
     def _setup_animations(self):
         """Set up rotation and pulse animations."""
-        # Rotation animation
+        # Rotation animation - will be updated based on CPU fan speed
         self.rotation_animation = QPropertyAnimation(self, b"rotation_angle")
-        self.rotation_animation.setDuration(8000)  # 8 seconds per rotation
+        self.rotation_animation.setDuration(8000)  # Default: 8 seconds per rotation
         self.rotation_animation.setStartValue(0)
         self.rotation_animation.setEndValue(360)
         self.rotation_animation.setLoopCount(-1)
         self.rotation_animation.setEasingCurve(QEasingCurve.Type.Linear)
         self.rotation_animation.start()
         
-        # Pulse animation
+        # Pulse animation for scale - will be updated based on GPU fan speed
         self.pulse_animation = QPropertyAnimation(self, b"scale_factor")
-        self.pulse_animation.setDuration(2000)
+        self.pulse_animation.setDuration(2000)  # Default: 2 seconds
         self.pulse_animation.setStartValue(0.95)
         self.pulse_animation.setEndValue(1.05)
         self.pulse_animation.setLoopCount(-1)
         self.pulse_animation.setEasingCurve(QEasingCurve.Type.InOutSine)
         self.pulse_animation.start()
+        
+        # Glow intensity animation for neon pulsation - based on GPU fan speed
+        self.glow_animation = QPropertyAnimation(self, b"glow_intensity")
+        self.glow_animation.setDuration(2000)  # Default: 2 seconds
+        self.glow_animation.setStartValue(0.3)
+        self.glow_animation.setEndValue(1.0)
+        self.glow_animation.setLoopCount(-1)
+        self.glow_animation.setEasingCurve(QEasingCurve.Type.InOutSine)
+        self.glow_animation.start()
     
     def get_rotation_angle(self) -> float:
         return self._rotation_angle
@@ -283,8 +299,93 @@ class AnimatedIcon(QWidget):
     
     scale_factor = pyqtProperty(float, get_scale_factor, set_scale_factor)
     
+    def get_glow_intensity(self) -> float:
+        """Get current glow intensity."""
+        return self._glow_intensity
+    
+    def set_glow_intensity(self, intensity: float):
+        """Set glow intensity (0.0 to 1.0)."""
+        self._glow_intensity = max(0.0, min(1.0, intensity))
+        self.update()
+    
+    glow_intensity = pyqtProperty(float, get_glow_intensity, set_glow_intensity)
+    
+    def set_fan_speeds(self, cpu_rpm: Optional[int] = None, gpu_rpm: Optional[int] = None):
+        """
+        Update fan speeds and adjust animations accordingly.
+        
+        Args:
+            cpu_rpm: CPU fan speed in RPM (affects rotation speed)
+            gpu_rpm: GPU fan speed in RPM (affects pulsation/glow speed)
+        """
+        if cpu_rpm is not None:
+            self.cpu_fan_rpm = cpu_rpm
+            self._update_rotation_speed()
+        
+        if gpu_rpm is not None:
+            self.gpu_fan_rpm = gpu_rpm
+            self._update_pulsation_speed()
+            self._update_glow_speed()
+    
+    def _update_rotation_speed(self):
+        """Update rotation animation speed based on CPU fan speed."""
+        # Calculate CPU fan speed percentage (0-100%)
+        cpu_pct = min(100, (self.cpu_fan_rpm / self.max_rpm) * 100) if self.max_rpm > 0 else 0
+        
+        # Rotation speed: faster fan = faster rotation
+        # Base duration: 8 seconds at 0%, scaling down to 1 second at 100%
+        # Formula: duration = 8 - (cpu_pct / 100) * 7
+        # So at 0%: 8s, at 100%: 1s
+        min_duration = 1000  # 1 second minimum (very fast)
+        max_duration = 8000  # 8 seconds maximum (slow)
+        duration = max(min_duration, max_duration - (cpu_pct / 100.0) * (max_duration - min_duration))
+        
+        # Update animation
+        if self.rotation_animation:
+            current_angle = self._rotation_angle
+            self.rotation_animation.setDuration(int(duration))
+            # Restart animation to apply new duration
+            self.rotation_animation.stop()
+            self.rotation_animation.start()
+    
+    def _update_pulsation_speed(self):
+        """Update pulsation animation speed based on GPU fan speed."""
+        # Calculate GPU fan speed percentage (0-100%)
+        gpu_pct = min(100, (self.gpu_fan_rpm / self.max_rpm) * 100) if self.max_rpm > 0 else 0
+        
+        # Pulsation speed: faster fan = faster pulsation
+        # Base duration: 3 seconds at 0%, scaling down to 0.5 seconds at 100%
+        min_duration = 500   # 0.5 seconds minimum (very fast)
+        max_duration = 3000  # 3 seconds maximum (slow)
+        duration = max(min_duration, max_duration - (gpu_pct / 100.0) * (max_duration - min_duration))
+        
+        # Update animation
+        if self.pulse_animation:
+            self.pulse_animation.setDuration(int(duration))
+            # Restart animation to apply new duration
+            self.pulse_animation.stop()
+            self.pulse_animation.start()
+    
+    def _update_glow_speed(self):
+        """Update glow pulsation speed based on GPU fan speed."""
+        # Calculate GPU fan speed percentage (0-100%)
+        gpu_pct = min(100, (self.gpu_fan_rpm / self.max_rpm) * 100) if self.max_rpm > 0 else 0
+        
+        # Glow pulsation speed: faster fan = faster glow
+        # Same speed as scale pulsation for consistency
+        min_duration = 500   # 0.5 seconds minimum (very fast)
+        max_duration = 3000  # 3 seconds maximum (slow)
+        duration = max(min_duration, max_duration - (gpu_pct / 100.0) * (max_duration - min_duration))
+        
+        # Update animation
+        if self.glow_animation:
+            self.glow_animation.setDuration(int(duration))
+            # Restart animation to apply new duration
+            self.glow_animation.stop()
+            self.glow_animation.start()
+    
     def paintEvent(self, event):
-        """Paint animated icon."""
+        """Paint animated icon with neon glow effect."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
@@ -302,18 +403,50 @@ class AnimatedIcon(QWidget):
         # Center the pixmap
         x = (self.width() - pixmap.width()) // 2
         y = (self.height() - pixmap.height()) // 2
+        center_x = self.width() / 2
+        center_y = self.height() / 2
+        
+        # Calculate glow size based on intensity (pulsating neon glow)
+        base_glow_size = max(pixmap.width(), pixmap.height()) * 0.15
+        glow_size = base_glow_size * (0.5 + self._glow_intensity * 0.5)
+        
+        # Draw multiple glow layers for neon effect
+        glow_colors = [
+            (GAME_COLORS['accent_blue'], 255 * self._glow_intensity * 0.8),
+            (GAME_COLORS['accent_cyan'], 255 * self._glow_intensity * 0.6),
+            (GAME_COLORS['accent_blue'], 255 * self._glow_intensity * 0.4),
+        ]
+        
+        for i, (color_hex, alpha) in enumerate(glow_colors):
+            glow_color = QColor(color_hex)
+            glow_color.setAlpha(int(alpha))
+            
+            # Create radial gradient for smooth glow
+            gradient = QRadialGradient(center_x, center_y, glow_size * (i + 1))
+            gradient.setColorAt(0.0, glow_color)
+            gradient.setColorAt(0.5, QColor(color_hex, int(alpha * 0.5)))
+            gradient.setColorAt(1.0, QColor(color_hex, 0))
+            
+            pen_width = int(3 + i * 2)
+            painter.setPen(QPen(QBrush(gradient), pen_width))
+            painter.setBrush(QBrush(Qt.BrushStyle.NoBrush))
+            
+            # Draw glow circles
+            glow_rect_x = center_x - (pixmap.width() / 2 + glow_size * (i + 1))
+            glow_rect_y = center_y - (pixmap.height() / 2 + glow_size * (i + 1))
+            glow_rect_size = pixmap.width() + glow_size * 2 * (i + 1)
+            painter.drawEllipse(
+                int(glow_rect_x),
+                int(glow_rect_y),
+                int(glow_rect_size),
+                int(glow_rect_size)
+            )
         
         # Apply rotation
-        painter.translate(self.width() / 2, self.height() / 2)
+        painter.translate(center_x, center_y)
         painter.rotate(self.rotation_angle)
-        painter.translate(-self.width() / 2, -self.height() / 2)
+        painter.translate(-center_x, -center_y)
         
-        # Draw with glow effect
-        glow_color = QColor(GAME_COLORS['accent_blue'])
-        glow_color.setAlpha(30)
-        painter.setPen(QPen(glow_color, 5))
-        painter.setBrush(QBrush(Qt.BrushStyle.NoBrush))
-        painter.drawEllipse(x - 5, y - 5, pixmap.width() + 10, pixmap.height() + 10)
-        
+        # Draw the icon
         painter.drawPixmap(x, y, pixmap)
 

@@ -16,7 +16,7 @@ try:
 except ImportError:
     YAML_AVAILABLE = False
 
-from .asusctl_interface import FanCurve, Profile as AsusProfile
+from .asusctl_interface import FanCurve, Profile as AsusProfile, get_preset_curve
 
 
 class SavedProfile:
@@ -238,4 +238,31 @@ class ProfileManager:
         except Exception as e:
             print(f"Error importing profile: {e}")
             return None
+    
+    def get_preset_names(self) -> List[str]:
+        """Get list of available preset names."""
+        return ['quiet', 'balanced', 'performance', 'conservative', 'max']
+    
+    def load_preset(self, preset_name: str) -> Dict:
+        """Load a preset curve configuration."""
+        from .asusctl_interface import get_preset_curve
+        
+        try:
+            cpu_curve = get_preset_curve(preset_name)
+            gpu_curve = get_preset_curve(preset_name)
+            
+            return {
+                'name': preset_name.title(),
+                'description': f'{preset_name.title()} preset curve',
+                'cpu_curve': [(p.temperature, p.fan_speed) for p in cpu_curve.points],
+                'gpu_curve': [(p.temperature, p.fan_speed) for p in gpu_curve.points]
+            }
+        except Exception as e:
+            print(f"Error loading preset {preset_name}: {e}")
+            return {
+                'name': preset_name.title(),
+                'description': f'{preset_name.title()} preset curve',
+                'cpu_curve': [(30, 30), (50, 50), (70, 70), (90, 90)],
+                'gpu_curve': [(30, 30), (50, 50), (70, 70), (90, 90)]
+            }
 

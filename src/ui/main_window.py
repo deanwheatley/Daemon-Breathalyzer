@@ -75,9 +75,9 @@ class MainWindow(QMainWindow):
         self.dashboard_tab = self._create_dashboard_tab()
         self.tabs.addTab(self.dashboard_tab, "Dashboard")
         
-        # Create fan curve editor tab
-        self.fan_curve_tab = self._create_fan_curve_tab()
-        self.tabs.addTab(self.fan_curve_tab, "Fan Curve Designer")
+        # Create fan curve builder tab
+        self.fan_curve_builder_tab = self._create_fan_curve_builder_tab()
+        self.tabs.addTab(self.fan_curve_builder_tab, "Fan Curve Builder")
         
         # Profile manager (no separate tab - profiles accessed via dropdown in fan curve editor)
         self.profile_manager = ProfileManager()
@@ -98,9 +98,7 @@ class MainWindow(QMainWindow):
         self.test_fans_tab = self._create_test_fans_tab()
         self.tabs.addTab(self.test_fans_tab, "Test Fans")
         
-        # Create apply profiles tab
-        self.apply_profiles_tab = self._create_apply_profiles_tab()
-        self.tabs.addTab(self.apply_profiles_tab, "Apply Profiles")
+        # Apply profiles tab removed
         
         # Create about tab
         self.about_tab = AboutTab(self)
@@ -335,14 +333,6 @@ class MainWindow(QMainWindow):
         row = 4
         metrics_grid.addWidget(self.fps_card, row, 0)
         
-        # Fan speed gauges
-        self.cpu_fan_gauge = FanSpeedGauge("CPU Fan", max_rpm=7000, color="#2196F3")
-        self.gpu_fan_gauge = FanSpeedGauge("GPU Fan", max_rpm=7000, color="#00BCD4")
-        
-        row = 5
-        metrics_grid.addWidget(self.cpu_fan_gauge, row, 0)
-        metrics_grid.addWidget(self.gpu_fan_gauge, row, 1)
-        
         layout.addLayout(metrics_grid)
         
         # Graphs
@@ -421,6 +411,11 @@ class MainWindow(QMainWindow):
         """Create the apply profiles tab."""
         from .apply_profiles_tab import ApplyProfilesTab
         return ApplyProfilesTab(self)
+    
+    def _create_fan_curve_builder_tab(self) -> QWidget:
+        """Create the fan curve builder tab."""
+        from .fan_curve_builder import FanCurveBuilderWidget
+        return FanCurveBuilderWidget(self)
     
     def _restore_persistent_curves(self):
         """Restore persistent fan curves on startup."""
@@ -504,33 +499,7 @@ class MainWindow(QMainWindow):
                 else:
                     self.gpu_memory_card.set_value(None, text="N/A")
             
-            # Update fan speed gauges
-            fan_speeds = metrics.get('fan_speeds', [])
-            cpu_fan_rpm = None
-            gpu_fan_rpm = None
-            
-            for fan in fan_speeds:
-                fan_name = fan.get('name', '').upper()
-                if fan_name == 'CPU':
-                    cpu_fan_rpm = fan.get('rpm')
-                elif fan_name == 'GPU':
-                    gpu_fan_rpm = fan.get('rpm')
-            
-            if hasattr(self, 'cpu_fan_gauge'):
-                self.cpu_fan_gauge.set_rpm(cpu_fan_rpm)
-            if hasattr(self, 'gpu_fan_gauge'):
-                self.gpu_fan_gauge.set_rpm(gpu_fan_rpm)
-            
-            # Update profile name on gauges
-            try:
-                current_profile = self.asusctl.get_current_profile() or Profile.BALANCED
-                profile_name = current_profile.value
-                if hasattr(self, 'cpu_fan_gauge'):
-                    self.cpu_fan_gauge.set_profile_name(profile_name)
-                if hasattr(self, 'gpu_fan_gauge'):
-                    self.gpu_fan_gauge.set_profile_name(profile_name)
-            except:
-                pass
+            # Fan gauges removed from System Monitor
             
             # Update network metrics
             if hasattr(self, 'network_sent_card'):
@@ -543,7 +512,7 @@ class MainWindow(QMainWindow):
             # Update FPS
             if hasattr(self, 'fps_card'):
                 fps = metrics.get('fps')
-                if fps is not None:
+                if fps is not None and fps > 0:
                     self.fps_card.set_value(fps, decimals=0)
                 else:
                     self.fps_card.set_value(None, text="N/A")
