@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QLabel, QTabWidget, QPushButton, QStatusBar, QMenuBar, QMenu,
     QSystemTrayIcon, QApplication
 )
-from PyQt6.QtCore import Qt, QTimer, QSize
+from PyQt6.QtCore import Qt, QTimer, QSize, pyqtSignal
 from PyQt6.QtGui import QFont, QAction, QIcon, QPixmap, QPainter
 from pathlib import Path
 
@@ -23,15 +23,20 @@ from .profile_manager_tab import ProfileManagerTab
 from .about_tab import AboutTab
 from ..control.asusctl_interface import AsusctlInterface, Profile
 from ..control.profile_manager import ProfileManager
+from .ui_scaling import UIScaling
 
 
 class MainWindow(QMainWindow):
     """Main application window."""
     
+    # Signal emitted when scale factor changes
+    scale_changed = pyqtSignal(float)
+    
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Daemon Breathalyzer")
         self.setGeometry(100, 100, 1200, 800)
+        self._current_scale = 1.0
         
         # Set window icon
         self._set_window_icon()
@@ -122,6 +127,39 @@ class MainWindow(QMainWindow):
         
         # Initial update
         self.update_dashboard()
+        
+        # Initialize scaling
+        self._update_scaling()
+    
+    def resizeEvent(self, event):
+        """Handle window resize to update scaling."""
+        super().resizeEvent(event)
+        self._update_scaling()
+    
+    def _update_scaling(self):
+        """Update scaling factor and notify all widgets."""
+        new_scale = UIScaling.get_scale_factor(self)
+        if abs(new_scale - self._current_scale) > 0.01:  # Only update if significant change
+            self._current_scale = new_scale
+            self.scale_changed.emit(new_scale)
+            
+            # Also update all child widgets directly
+            self._apply_scaling_to_children(self, new_scale)
+    
+    def _apply_scaling_to_children(self, widget: QWidget, scale: float):
+        """Recursively apply scaling to all child widgets."""
+        # If widget has update_scaling method, call it
+        if hasattr(widget, 'update_scaling'):
+            widget.update_scaling()
+        
+        # Recursively apply to children
+        for child in widget.children():
+            if isinstance(child, QWidget):
+                self._apply_scaling_to_children(child, scale)
+    
+    def get_scale_factor(self) -> float:
+        """Get current scale factor."""
+        return self._current_scale
     
     def _create_menu_bar(self):
         """Create the menu bar."""

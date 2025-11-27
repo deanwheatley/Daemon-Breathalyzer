@@ -17,6 +17,7 @@ from PyQt6.QtGui import QFont
 from ..control.profile_manager import ProfileManager
 from ..control.asusctl_interface import AsusctlInterface, Profile, FanCurve
 from .game_style_theme import GAME_COLORS, GAME_STYLES
+from .ui_scaling import UIScaling
 
 
 class ApplyProfilesTab(QWidget):
@@ -29,9 +30,16 @@ class ApplyProfilesTab(QWidget):
         
         self.current_asus_profile = Profile.BALANCED  # Default
         
+        # Base sizes for scaling
+        self._base_title_font_size = 24
+        self._base_label_font_size = 11
+        self._base_layout_margins = (30, 30, 30, 30)
+        self._base_layout_spacing = 20
+        
         self.setup_ui()
         self.refresh_profile_list()
         self.refresh_current_status()
+        self.update_scaling()
         
         # Timer to periodically refresh status
         self.status_timer = QTimer()
@@ -45,13 +53,9 @@ class ApplyProfilesTab(QWidget):
         layout.setContentsMargins(30, 30, 30, 30)
         
         # Title
-        title = QLabel("Apply Profiles")
-        title_font = QFont()
-        title_font.setPointSize(24)
-        title_font.setWeight(QFont.Weight.Bold)
-        title.setFont(title_font)
-        title.setStyleSheet(f"color: {GAME_COLORS['accent_blue']};")
-        layout.addWidget(title)
+        self.title_label = QLabel("Apply Profiles")
+        self.title_label.setStyleSheet(f"color: {GAME_COLORS['accent_blue']};")
+        layout.addWidget(self.title_label)
         
         # Description
         desc = QLabel(
@@ -466,4 +470,30 @@ class ApplyProfilesTab(QWidget):
                 "Error",
                 f"Failed to apply profile: {str(e)}"
             )
+    
+    def update_scaling(self):
+        """Update widget scaling based on window size."""
+        window = self.window()
+        if not window:
+            return
+        
+        scale = UIScaling.get_scale_factor(window)
+        
+        # Update title font
+        if hasattr(self, 'title_label'):
+            title_font = UIScaling.scale_font(self._base_title_font_size, window, scale)
+            title_font.setWeight(QFont.Weight.Bold)
+            self.title_label.setFont(title_font)
+        
+        # Update layout margins and spacing
+        layout = self.layout()
+        if layout:
+            margins = tuple(UIScaling.scale_size(m, window, scale) for m in self._base_layout_margins)
+            layout.setContentsMargins(*margins)
+            layout.setSpacing(UIScaling.scale_size(self._base_layout_spacing, window, scale))
+    
+    def resizeEvent(self, event):
+        """Handle resize to update scaling."""
+        super().resizeEvent(event)
+        self.update_scaling()
 

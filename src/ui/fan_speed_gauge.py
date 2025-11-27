@@ -11,6 +11,8 @@ from PyQt6.QtGui import QPainter, QPen, QBrush, QColor, QFont
 from typing import Optional
 import math
 
+from .ui_scaling import UIScaling
+
 
 class FanSpeedGauge(QWidget):
     """A circular gauge widget for displaying fan speed in RPM."""
@@ -22,8 +24,18 @@ class FanSpeedGauge(QWidget):
         self.color = color
         self.current_rpm = 0
         self.profile_name = None  # Store profile name to display
-        self.setMinimumSize(180, 200)  # Increased height for profile name
+        
+        # Base sizes for scaling
+        self._base_min_width = 180
+        self._base_min_height = 200
+        self._base_rpm_font_size = 18
+        self._base_title_font_size = 10
+        self._base_profile_font_size = 9
+        
+        self.setMinimumSize(self._base_min_width, self._base_min_height)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        
+        self.update_scaling()
         
         # Game-style styling
         from .game_style_theme import GAME_COLORS
@@ -48,6 +60,24 @@ class FanSpeedGauge(QWidget):
         """Set the profile name to display."""
         self.profile_name = profile_name
         self.update()  # Trigger repaint
+    
+    def update_scaling(self):
+        """Update widget scaling based on window size."""
+        window = self.window()
+        if not window:
+            return
+        
+        scale = UIScaling.get_scale_factor(window)
+        self.setMinimumSize(
+            UIScaling.scale_size(self._base_min_width, window, scale),
+            UIScaling.scale_size(self._base_min_height, window, scale)
+        )
+    
+    def resizeEvent(self, event):
+        """Handle resize to update scaling."""
+        super().resizeEvent(event)
+        self.update_scaling()
+        self.update()  # Repaint with new scaling
     
     def paintEvent(self, event):
         """Paint the gauge."""
@@ -90,9 +120,10 @@ class FanSpeedGauge(QWidget):
         span_angle = int(270 * percentage * 16)
         painter.drawArc(rect, 45 * 16, span_angle)
         
-        # Draw center text - RPM value
-        font = QFont()
-        font.setPointSize(18)
+        # Draw center text - RPM value (scaled)
+        window = self.window()
+        scale = UIScaling.get_scale_factor(window) if window else 1.0
+        font = UIScaling.scale_font(self._base_rpm_font_size, window, scale)
         font.setBold(True)
         painter.setFont(font)
         painter.setPen(text_primary)
@@ -104,35 +135,34 @@ class FanSpeedGauge(QWidget):
             rpm_text = "--"
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter, rpm_text)
         
-        # Draw "RPM" label below value
-        font_small = QFont()
-        font_small.setPointSize(8)
+        # Draw "RPM" label below value (scaled)
+        font_small = UIScaling.scale_font(8, window, scale)
         painter.setFont(font_small)
         painter.setPen(text_secondary)
         
         rpm_rect = QRectF(rect.x(), rect.y() + rect.height() * 0.6, rect.width(), rect.height() * 0.2)
         painter.drawText(rpm_rect, Qt.AlignmentFlag.AlignCenter, "RPM")
         
-        # Draw title at top
-        title_font = QFont()
-        title_font.setPointSize(10)
+        # Draw title at top (scaled)
+        title_font = UIScaling.scale_font(self._base_title_font_size, window, scale)
         painter.setFont(title_font)
         painter.setPen(text_secondary)
         
         title_rect = QRectF(0, y_offset - 20, width, 20)
         painter.drawText(title_rect, Qt.AlignmentFlag.AlignCenter, self.title)
         
-        # Draw percentage label
+        # Draw percentage label (scaled)
         if self.current_rpm > 0:
             percent_text = f"{percentage * 100:.0f}%"
+            percent_font = UIScaling.scale_font(8, window, scale)
+            painter.setFont(percent_font)
             percent_rect = QRectF(rect.x(), rect.y() - 25, rect.width(), 20)
             painter.setPen(text_secondary)
             painter.drawText(percent_rect, Qt.AlignmentFlag.AlignCenter, percent_text)
         
-        # Draw profile name at bottom
+        # Draw profile name at bottom (scaled)
         if self.profile_name:
-            profile_font = QFont()
-            profile_font.setPointSize(9)
+            profile_font = UIScaling.scale_font(self._base_profile_font_size, window, scale)
             profile_font.setBold(True)
             painter.setFont(profile_font)
             painter.setPen(accent_blue)

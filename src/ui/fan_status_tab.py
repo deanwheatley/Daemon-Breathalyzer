@@ -17,6 +17,7 @@ import numpy as np
 from ..control.asusctl_interface import AsusctlInterface, Profile, FanCurve
 from ..monitoring.system_monitor import SystemMonitor
 from .game_style_theme import GAME_COLORS, GAME_STYLES
+from .ui_scaling import UIScaling
 
 
 class FanStatusWidget(QWidget):
@@ -33,8 +34,16 @@ class FanStatusWidget(QWidget):
         self.current_load = None
         self.glow_layers = []  # Initialize glow layers list
         
+        # Base sizes for scaling
+        self._base_title_font_size = 16
+        self._base_value_font_size = 18
+        self._base_label_font_size = 10
+        self._base_layout_margins = (20, 20, 20, 20)
+        self._base_layout_spacing = 15
+        
         self._init_ui()
         self._load_curve()
+        self.update_scaling()
     
     def _init_ui(self):
         """Initialize the UI."""
@@ -43,13 +52,9 @@ class FanStatusWidget(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         
         # Title
-        title = QLabel(f"{self.fan_name} Fan Status")
-        title_font = QFont()
-        title_font.setPointSize(16)
-        title_font.setBold(True)
-        title.setFont(title_font)
-        title.setStyleSheet(f"color: {GAME_COLORS['accent_blue']}; margin-bottom: 10px;")
-        layout.addWidget(title)
+        self.title_label = QLabel(f"{self.fan_name} Fan Status")
+        self.title_label.setStyleSheet(f"color: {GAME_COLORS['accent_blue']}; margin-bottom: 10px;")
+        layout.addWidget(self.title_label)
         
         # Main content area - horizontal split
         content_layout = QHBoxLayout()
@@ -81,21 +86,21 @@ class FanStatusWidget(QWidget):
         # Temperature
         self.temp_label = QLabel("Temperature:")
         self.temp_value = QLabel("N/A")
-        self.temp_value.setStyleSheet("font-size: 18px; font-weight: bold; color: #2196F3;")
+        self.temp_value.setStyleSheet("font-weight: bold; color: #2196F3;")
         layout.addWidget(self.temp_label, 0, 0)
         layout.addWidget(self.temp_value, 0, 1)
         
         # Fan Speed (RPM)
         self.rpm_label = QLabel("Fan Speed (RPM):")
         self.rpm_value = QLabel("N/A")
-        self.rpm_value.setStyleSheet("font-size: 18px; font-weight: bold; color: #4CAF50;")
+        self.rpm_value.setStyleSheet("font-weight: bold; color: #4CAF50;")
         layout.addWidget(self.rpm_label, 1, 0)
         layout.addWidget(self.rpm_value, 1, 1)
         
         # Fan Speed (%)
         self.percent_label = QLabel("Fan Speed (%):")
         self.percent_value = QLabel("N/A")
-        self.percent_value.setStyleSheet("font-size: 18px; font-weight: bold; color: #FF9800;")
+        self.percent_value.setStyleSheet("font-weight: bold; color: #FF9800;")
         layout.addWidget(self.percent_label, 2, 0)
         layout.addWidget(self.percent_value, 2, 1)
         
@@ -103,14 +108,14 @@ class FanStatusWidget(QWidget):
         load_name = "CPU Load" if self.fan_name == "CPU" else "GPU Load"
         self.load_label = QLabel(f"{load_name}:")
         self.load_value = QLabel("N/A")
-        self.load_value.setStyleSheet("font-size: 18px; font-weight: bold; color: #9C27B0;")
+        self.load_value.setStyleSheet("font-weight: bold; color: #9C27B0;")
         layout.addWidget(self.load_label, 3, 0)
         layout.addWidget(self.load_value, 3, 1)
         
         # Expected fan speed from curve
         self.expected_label = QLabel("Expected Speed:")
         self.expected_value = QLabel("N/A")
-        self.expected_value.setStyleSheet("font-size: 18px; font-weight: bold; color: #F44336;")
+        self.expected_value.setStyleSheet("font-weight: bold; color: #F44336;")
         layout.addWidget(self.expected_label, 4, 0)
         layout.addWidget(self.expected_value, 4, 1)
         
@@ -452,10 +457,92 @@ class FanStatusWidget(QWidget):
                     self._update_curve_widget_title()
         except Exception as e:
             print(f"Error reloading curve for {self.fan_name}: {e}")
+    
+    def update_scaling(self):
+        """Update widget scaling based on window size."""
+        window = self.window()
+        if not window:
+            return
+        
+        scale = UIScaling.get_scale_factor(window)
+        
+        # Update title font
+        if hasattr(self, 'title_label'):
+            title_font = UIScaling.scale_font(self._base_title_font_size, window, scale)
+            title_font.setBold(True)
+            self.title_label.setFont(title_font)
+        
+        # Update value fonts
+        for value_widget in [self.temp_value, self.rpm_value, self.percent_value, 
+                            self.load_value, self.expected_value]:
+            if hasattr(value_widget, 'setFont'):
+                value_font = UIScaling.scale_font(self._base_value_font_size, window, scale)
+                value_font.setBold(True)
+                value_widget.setFont(value_font)
+        
+        # Update label fonts
+        for label_widget in [self.temp_label, self.rpm_label, self.percent_label, 
+                            self.load_label, self.expected_label]:
+            if hasattr(label_widget, 'setFont'):
+                label_font = UIScaling.scale_font(self._base_label_font_size, window, scale)
+                label_widget.setFont(label_font)
+        
+        # Update layout margins and spacing
+        layout = self.layout()
+        if layout:
+            margins = tuple(UIScaling.scale_size(m, window, scale) for m in self._base_layout_margins)
+            layout.setContentsMargins(*margins)
+            layout.setSpacing(UIScaling.scale_size(self._base_layout_spacing, window, scale))
+    
+    def resizeEvent(self, event):
+        """Handle resize to update scaling."""
+        super().resizeEvent(event)
+        self.update_scaling()
         
         # Always update the horizontal line and intersection marker with current fan speed
         # This ensures the line updates even if the curve hasn't changed
         self._update_current_position_marker()
+    
+    def update_scaling(self):
+        """Update widget scaling based on window size."""
+        window = self.window()
+        if not window:
+            return
+        
+        scale = UIScaling.get_scale_factor(window)
+        
+        # Update title font
+        if hasattr(self, 'title_label'):
+            title_font = UIScaling.scale_font(self._base_title_font_size, window, scale)
+            title_font.setBold(True)
+            self.title_label.setFont(title_font)
+        
+        # Update value fonts
+        for value_widget in [self.temp_value, self.rpm_value, self.percent_value, 
+                            self.load_value, self.expected_value]:
+            if hasattr(value_widget, 'setFont'):
+                value_font = UIScaling.scale_font(self._base_value_font_size, window, scale)
+                value_font.setBold(True)
+                value_widget.setFont(value_font)
+        
+        # Update label fonts
+        for label_widget in [self.temp_label, self.rpm_label, self.percent_label, 
+                            self.load_label, self.expected_label]:
+            if hasattr(label_widget, 'setFont'):
+                label_font = UIScaling.scale_font(self._base_label_font_size, window, scale)
+                label_widget.setFont(label_font)
+        
+        # Update layout margins and spacing
+        layout = self.layout()
+        if layout:
+            margins = tuple(UIScaling.scale_size(m, window, scale) for m in self._base_layout_margins)
+            layout.setContentsMargins(*margins)
+            layout.setSpacing(UIScaling.scale_size(self._base_layout_spacing, window, scale))
+    
+    def resizeEvent(self, event):
+        """Handle resize to update scaling."""
+        super().resizeEvent(event)
+        self.update_scaling()
     
     def _update_curve_widget_title(self):
         """Update the curve widget title with current profile name."""

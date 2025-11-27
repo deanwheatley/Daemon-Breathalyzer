@@ -18,6 +18,7 @@ import numpy as np
 from ..control.asusctl_interface import FanCurve, FanCurvePoint, Profile, AsusctlInterface
 from ..control.profile_manager import ProfileManager, SavedProfile
 from .game_style_theme import GAME_COLORS, GAME_STYLES
+from .ui_scaling import UIScaling
 
 
 class DraggablePoint(pg.ScatterPlotItem):
@@ -63,8 +64,16 @@ class FanCurveEditor(QWidget):
         self.asusctl = AsusctlInterface()
         self.profile_manager = ProfileManager()
         
+        # Base sizes for scaling
+        self._base_title_font_size = 24
+        self._base_label_font_size = 10
+        self._base_button_font_size = 11
+        self._base_layout_margins = (30, 30, 30, 30)
+        self._base_layout_spacing = 20
+        
         self.setup_ui()
         self.refresh_profile_dropdown()
+        self.update_scaling()
         
     def setup_ui(self):
         """Set up the UI."""
@@ -78,13 +87,9 @@ class FanCurveEditor(QWidget):
         # Title and fan selector
         header_layout = QHBoxLayout()
         
-        title = QLabel("Fan Curve Designer")
-        title_font = QFont()
-        title_font.setPointSize(24)
-        title_font.setWeight(QFont.Weight.Bold)
-        title.setFont(title_font)
-        title.setStyleSheet(f"color: {GAME_COLORS['accent_blue']}; margin-bottom: 5px;")
-        header_layout.addWidget(title)
+        self.title_label = QLabel("Fan Curve Designer")
+        self.title_label.setStyleSheet(f"color: {GAME_COLORS['accent_blue']}; margin-bottom: 5px;")
+        header_layout.addWidget(self.title_label)
         header_layout.addStretch()
         
         # Preset curves dropdown
@@ -161,8 +166,10 @@ class FanCurveEditor(QWidget):
         # Create PyQtGraph widget with game-style theme
         self.graph_widget = pg.PlotWidget()
         self.graph_widget.setBackground(pg.mkColor(GAME_COLORS['bg_card']))
-        self.graph_widget.setLabel('left', 'Fan Speed (%)', **{'color': GAME_COLORS['text_secondary'], 'font-size': '11pt'})
-        self.graph_widget.setLabel('bottom', 'Temperature (°C)', **{'color': GAME_COLORS['text_secondary'], 'font-size': '11pt'})
+        self._base_graph_label_font_size = 11
+        # Labels will be updated in update_scaling
+        self.graph_widget.setLabel('left', 'Fan Speed (%)', **{'color': GAME_COLORS['text_secondary']})
+        self.graph_widget.setLabel('bottom', 'Temperature (°C)', **{'color': GAME_COLORS['text_secondary']})
         self.graph_widget.setXRange(self.temp_range[0], self.temp_range[1])
         self.graph_widget.setYRange(self.speed_range[0], self.speed_range[1])
         self.graph_widget.showGrid(x=True, y=True, alpha=0.1)
@@ -789,3 +796,41 @@ class FanCurveEditor(QWidget):
         elif self.gpu_fan_btn.isChecked():
             return "GPU"
         return "CPU"
+    
+    def update_scaling(self):
+        """Update widget scaling based on window size."""
+        window = self.window()
+        if not window:
+            return
+        
+        scale = UIScaling.get_scale_factor(window)
+        
+        # Update title font
+        if hasattr(self, 'title_label'):
+            title_font = UIScaling.scale_font(self._base_title_font_size, window, scale)
+            title_font.setWeight(QFont.Weight.Bold)
+            self.title_label.setFont(title_font)
+        
+        # Update layout margins and spacing
+        layout = self.layout()
+        if layout:
+            margins = tuple(UIScaling.scale_size(m, window, scale) for m in self._base_layout_margins)
+            layout.setContentsMargins(*margins)
+            layout.setSpacing(UIScaling.scale_size(self._base_layout_spacing, window, scale))
+        
+        # Update graph labels with scaled font
+        if hasattr(self, 'graph_widget'):
+            font_size_pt = int(self._base_graph_label_font_size * scale)
+            self.graph_widget.setLabel('left', 'Fan Speed (%)', **{
+                'color': GAME_COLORS['text_secondary'],
+                'font-size': f'{font_size_pt}pt'
+            })
+            self.graph_widget.setLabel('bottom', 'Temperature (°C)', **{
+                'color': GAME_COLORS['text_secondary'],
+                'font-size': f'{font_size_pt}pt'
+            })
+    
+    def resizeEvent(self, event):
+        """Handle resize to update scaling."""
+        super().resizeEvent(event)
+        self.update_scaling()

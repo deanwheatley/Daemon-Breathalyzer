@@ -13,6 +13,7 @@ import math
 
 from .game_style_theme import GAME_COLORS
 from .particle_effects import ParticleOverlay
+from .ui_scaling import UIScaling
 
 
 class AnimatedMetricCard(QWidget):
@@ -31,30 +32,30 @@ class AnimatedMetricCard(QWidget):
         self.value_animation = None
         self.glow_animation = None
         
+        # Base sizes for scaling
+        self._base_title_font_size = 10
+        self._base_value_font_size = 28
+        self._base_margin = 20
+        self._base_min_height = 140
+        
         self._setup_ui()
         self._setup_animations()
+        self.update_scaling()
     
     def _setup_ui(self):
         """Set up the UI layout."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 15, 20, 15)
         layout.setSpacing(5)
+        self._base_layout_margins = (20, 15, 20, 15)
         
         # Title label
         self.title_label = QLabel(self.title)
-        title_font = QFont()
-        title_font.setPointSize(10)
-        title_font.setBold(True)
-        self.title_label.setFont(title_font)
         self.title_label.setStyleSheet(f"color: {GAME_COLORS['text_secondary']};")
         layout.addWidget(self.title_label)
         
         # Value label
         self.value_label = QLabel("--")
-        value_font = QFont()
-        value_font.setPointSize(28)
-        value_font.setBold(True)
-        self.value_label.setFont(value_font)
         self.value_label.setStyleSheet(f"color: {self.color};")
         layout.addWidget(self.value_label)
         
@@ -68,7 +69,7 @@ class AnimatedMetricCard(QWidget):
             self.unit_label.hide()  # Hide - units shown inline
             layout.addWidget(self.unit_label)
         
-        self.setMinimumHeight(140)
+        self.setMinimumHeight(self._base_min_height)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         
         # Game-style styling
@@ -84,6 +85,37 @@ class AnimatedMetricCard(QWidget):
         self.particle_overlay = ParticleOverlay(self)
         self.particle_overlay.set_threshold(70.0)
         self.particle_overlay.set_max_value(100.0)
+    
+    def update_scaling(self):
+        """Update widget scaling based on window size."""
+        window = self.window()
+        if not window:
+            return
+        
+        scale = UIScaling.get_scale_factor(window)
+        
+        # Update fonts
+        title_font = UIScaling.scale_font(self._base_title_font_size, window, scale)
+        title_font.setBold(True)
+        self.title_label.setFont(title_font)
+        
+        value_font = UIScaling.scale_font(self._base_value_font_size, window, scale)
+        value_font.setBold(True)
+        self.value_label.setFont(value_font)
+        
+        # Update layout margins
+        layout = self.layout()
+        if layout:
+            margins = tuple(UIScaling.scale_size(m, window, scale) for m in self._base_layout_margins)
+            layout.setContentsMargins(*margins)
+        
+        # Update minimum height
+        self.setMinimumHeight(UIScaling.scale_size(self._base_min_height, window, scale))
+    
+    def resizeEvent(self, event):
+        """Handle resize to update scaling."""
+        super().resizeEvent(event)
+        self.update_scaling()
     
     def _setup_animations(self):
         """Set up value and glow animations."""

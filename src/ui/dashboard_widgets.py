@@ -14,6 +14,7 @@ import pyqtgraph as pg
 from typing import Optional, List
 
 from .game_style_theme import GAME_COLORS
+from .ui_scaling import UIScaling
 
 
 class MetricCard(QWidget):
@@ -100,7 +101,10 @@ class GraphWidget(QWidget):
     
     def __init__(self):
         super().__init__()
-        self.setMinimumHeight(300)
+        self._base_min_height = 300
+        self._base_label_font_size = 11
+        self._base_container_margin = 15
+        self.setMinimumHeight(self._base_min_height)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         
         # Create PyQtGraph widget with game-style dark theme
@@ -108,8 +112,10 @@ class GraphWidget(QWidget):
         # Dark background with game-style colors
         bg_color = GAME_COLORS['bg_card']
         self.graph.setBackground(pg.mkColor(bg_color))
-        self.graph.setLabel('left', 'Value', **{'color': GAME_COLORS['text_secondary'], 'font-size': '11pt'})
-        self.graph.setLabel('bottom', 'Time (seconds)', **{'color': GAME_COLORS['text_secondary'], 'font-size': '11pt'})
+        
+        # Labels will be updated in update_scaling
+        self.graph.setLabel('left', 'Value', **{'color': GAME_COLORS['text_secondary']})
+        self.graph.setLabel('bottom', 'Time (seconds)', **{'color': GAME_COLORS['text_secondary']})
         self.graph.showGrid(x=True, y=True, alpha=0.1)
         
         # Game-style axis colors
@@ -139,13 +145,52 @@ class GraphWidget(QWidget):
             }}
         """)
         container_layout = QVBoxLayout(container)
-        container_layout.setContentsMargins(15, 15, 15, 15)
+        container_layout.setContentsMargins(self._base_container_margin, self._base_container_margin, 
+                                           self._base_container_margin, self._base_container_margin)
         container_layout.addWidget(self.graph)
         
         layout.addWidget(container)
         
+        # Store container layout for scaling
+        self.container_layout = container_layout
+        
         # Game-style legend
         legend = self.graph.addLegend(offset=(10, 10))
+        
+        self.update_scaling()
+    
+    def update_scaling(self):
+        """Update widget scaling based on window size."""
+        window = self.window()
+        if not window:
+            return
+        
+        scale = UIScaling.get_scale_factor(window)
+        
+        # Update minimum height
+        self.setMinimumHeight(UIScaling.scale_size(self._base_min_height, window, scale))
+        
+        # Update container margins
+        if hasattr(self, 'container_layout'):
+            margin = UIScaling.scale_size(self._base_container_margin, window, scale)
+            self.container_layout.setContentsMargins(margin, margin, margin, margin)
+        
+        # Update graph labels with scaled font
+        # PyQtGraph uses HTML-like syntax, so we scale via font size calculation
+        font_size_pt = int(self._base_label_font_size * scale)
+        self.graph.setLabel('left', 'Value', **{
+            'color': GAME_COLORS['text_secondary'],
+            'font-size': f'{font_size_pt}pt'
+        })
+        self.graph.setLabel('bottom', 'Time (seconds)', **{
+            'color': GAME_COLORS['text_secondary'],
+            'font-size': f'{font_size_pt}pt'
+        })
+    
+    def resizeEvent(self, event):
+        """Handle resize to update scaling."""
+        super().resizeEvent(event)
+        self.update_scaling()
         legend.setPen(pg.mkPen(color=GAME_COLORS['border'], width=1))
         legend.setBrush(pg.mkBrush(color=pg.mkColor(GAME_COLORS['bg_card'] + 'F0')))  # Semi-transparent
         # Legend text color

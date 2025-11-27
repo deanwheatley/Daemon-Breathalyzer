@@ -14,6 +14,7 @@ from PyQt6.QtGui import QFont, QDesktopServices
 from typing import Optional
 
 from .game_style_theme import GAME_COLORS, GAME_STYLES
+from .ui_scaling import UIScaling
 
 
 class HelpTab(QWidget):
@@ -21,7 +22,12 @@ class HelpTab(QWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Base sizes for scaling
+        self._base_title_font_size = 24
+        self._base_layout_margins = (30, 30, 30, 30)
+        self._base_layout_spacing = 20
         self.setup_ui()
+        self.update_scaling()
     
     def setup_ui(self):
         """Set up the UI."""
@@ -33,13 +39,9 @@ class HelpTab(QWidget):
         layout.setContentsMargins(30, 30, 30, 30)
         
         # Title
-        title = QLabel("Help & Documentation")
-        title_font = QFont()
-        title_font.setPointSize(24)
-        title_font.setBold(True)
-        title.setFont(title_font)
-        title.setStyleSheet(f"color: {GAME_COLORS['accent_blue']}; margin-bottom: 10px;")
-        layout.addWidget(title)
+        self.title_label = QLabel("Help & Documentation")
+        self.title_label.setStyleSheet(f"color: {GAME_COLORS['accent_blue']}; margin-bottom: 10px;")
+        layout.addWidget(self.title_label)
         
         # Create internal tab widget for help sections
         tabs = QTabWidget()
@@ -76,6 +78,32 @@ class HelpTab(QWidget):
         
         layout.addWidget(text_edit)
         return widget
+    
+    def update_scaling(self):
+        """Update widget scaling based on window size."""
+        window = self.window()
+        if not window:
+            return
+        
+        scale = UIScaling.get_scale_factor(window)
+        
+        # Update title font
+        if hasattr(self, 'title_label'):
+            title_font = UIScaling.scale_font(self._base_title_font_size, window, scale)
+            title_font.setBold(True)
+            self.title_label.setFont(title_font)
+        
+        # Update layout margins and spacing
+        layout = self.layout()
+        if layout:
+            margins = tuple(UIScaling.scale_size(m, window, scale) for m in self._base_layout_margins)
+            layout.setContentsMargins(*margins)
+            layout.setSpacing(UIScaling.scale_size(self._base_layout_spacing, window, scale))
+    
+    def resizeEvent(self, event):
+        """Handle resize to update scaling."""
+        super().resizeEvent(event)
+        self.update_scaling()
     
     def _create_getting_started_tab(self) -> QWidget:
         """Create getting started help content."""

@@ -20,6 +20,7 @@ from .dashboard_widgets import MetricCard, GraphWidget
 from .fan_speed_gauge import FanSpeedGauge
 from .game_style_theme import GAME_COLORS, GAME_STYLES
 from .animated_widgets import AnimatedMetricCard, AnimatedIcon
+from .ui_scaling import UIScaling
 
 
 class ResponsiveDashboard(QWidget):
@@ -45,14 +46,13 @@ class ResponsiveDashboard(QWidget):
         
         # Title with animated icon
         title_layout = QHBoxLayout()
-        title = QLabel("System Monitor")
-        title_font = QFont()
-        title_font.setPointSize(24)
-        title_font.setBold(True)
-        title.setFont(title_font)
-        title.setStyleSheet(f"color: {GAME_COLORS['text_primary']};")
-        title_layout.addWidget(title)
+        self.title_label = QLabel("System Monitor")
+        self.title_label.setStyleSheet(f"color: {GAME_COLORS['text_primary']};")
+        title_layout.addWidget(self.title_label)
         title_layout.addStretch()
+        
+        # Base font size for scaling
+        self._base_title_font_size = 24
         
         # Animated icon
         icon_path = self._find_icon_path()
@@ -64,10 +64,14 @@ class ResponsiveDashboard(QWidget):
         layout.addLayout(title_layout)
         
         # Preferences button (eye icon to toggle visibility)
-        prefs_btn = QPushButton("⚙ Preferences")
-        prefs_btn.setStyleSheet(GAME_STYLES['button'])
-        prefs_btn.clicked.connect(self._show_preferences_dialog)
-        title_layout.insertWidget(1, prefs_btn)
+        self.prefs_btn = QPushButton("⚙ Preferences")
+        self.prefs_btn.setStyleSheet(GAME_STYLES['button'])
+        self.prefs_btn.clicked.connect(self._show_preferences_dialog)
+        title_layout.insertWidget(1, self.prefs_btn)
+        
+        # Base sizes for scaling
+        self._base_layout_margins = (30, 30, 30, 30)
+        self._base_layout_spacing = 20
         
         # Scrollable metrics area
         scroll = QScrollArea()
@@ -95,10 +99,46 @@ class ResponsiveDashboard(QWidget):
         layout.addWidget(self.graph_widget)
     
     def resizeEvent(self, event):
-        """Handle window resize to update layout."""
+        """Handle window resize to update layout and scaling."""
         super().resizeEvent(event)
         # Update layout when window is resized for responsive columns
         QTimer.singleShot(100, self._update_layout)
+        # Update scaling
+        self.update_scaling()
+    
+    def update_scaling(self):
+        """Update widget scaling based on window size."""
+        window = self.window()
+        if not window:
+            return
+        
+        scale = UIScaling.get_scale_factor(window)
+        
+        # Update title font if it exists
+        if hasattr(self, 'title_label'):
+            title_font = UIScaling.scale_font(self._base_title_font_size, window, scale)
+            title_font.setBold(True)
+            self.title_label.setFont(title_font)
+        
+        # Update layout margins and spacing
+        layout = self.layout()
+        if layout:
+            margins = tuple(UIScaling.scale_size(m, window, scale) for m in self._base_layout_margins)
+            layout.setContentsMargins(*margins)
+            layout.setSpacing(UIScaling.scale_size(self._base_layout_spacing, window, scale))
+        
+        # Update grid layout spacing
+        if hasattr(self, 'scroll_layout'):
+            self.scroll_layout.setSpacing(UIScaling.scale_size(15, window, scale))
+        
+        # Update all child metric widgets
+        for widget in self.metric_widgets.values():
+            if hasattr(widget, 'update_scaling'):
+                widget.update_scaling()
+        
+        # Update graph widget if it has scaling support
+        if hasattr(self, 'graph_widget') and hasattr(self.graph_widget, 'update_scaling'):
+            self.graph_widget.update_scaling()
     
     def _find_icon_path(self) -> Optional[Path]:
         """Find icon path."""
