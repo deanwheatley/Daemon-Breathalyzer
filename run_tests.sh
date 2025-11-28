@@ -1,5 +1,5 @@
 #!/bin/bash
-# Test runner script for ASUS Fan Control
+# Test runner script for Daemon Breathalyzer
 
 set -e
 
@@ -7,7 +7,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
 echo "=========================================="
-echo "ASUS Fan Control - Test Suite"
+echo "Daemon Breathalyzer - Test Suite"
 echo "=========================================="
 echo ""
 

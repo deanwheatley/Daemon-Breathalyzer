@@ -1,0 +1,29 @@
+# UI Framework - PyQt6 chosen
+PyQt6>=6.4.0
+PyQt6-Charts>=6.4.0
+PyQtGraph>=0.13.0
+
+# System Monitoring
+psutil>=5.9.0
+py3nvml>=0.2.6
+
+# D-Bus Integration
+pydbus>=0.6.0
+
+# Data & Visualization
+matplotlib>=3.6.0
+numpy>=1.24.0
+
+# Configuration
+pyyaml>=6.0
+
+# Utilities
+# python-systemd removed - not currently used and version conflict
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.1
+pytest-qt>=4.2.0
+pytest-timeout>=2.1.0
+

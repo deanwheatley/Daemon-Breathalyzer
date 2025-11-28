@@ -29,7 +29,7 @@ Qt6 (specifically from version 6.5.0) requires additional XCB libraries for prop
 
 If the app still doesn't start, check the log file:
 ```bash
-cat ~/.local/share/asus-control/launcher.log
+cat ~/.local/share/daemon-breathalyzer/launcher.log
 ```
 
 This will show detailed error messages.

@@ -2,14 +2,14 @@
 
 ## Overview
 
-The ASUS Fan Control application includes a comprehensive test suite that covers all major features and components.
+The Daemon Breathalyzer application includes a comprehensive test suite that covers all major features and components.
 
 ## Quick Start
 
 ### Run All Tests
 
 ```bash
-cd ~/projects/asus-control
+cd ~/projects/daemon-breathalyzer
 source venv/bin/activate
 ./run_tests.sh
 ```

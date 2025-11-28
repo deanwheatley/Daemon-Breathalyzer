@@ -8,8 +8,8 @@ The `package/` folder contains everything a new user needs to install and run th
 
 - ✅ All source code (`src/`)
 - ✅ Installation scripts (`install.sh`, `setup_venv.py`)
-- ✅ Launcher scripts (`asus-control-launcher.sh`)
-- ✅ Desktop entry file (`asus-control.desktop`)
+- ✅ Launcher scripts (`daemon-breathalyzer-launcher.sh`)
+- ✅ Desktop entry file (`daemon-breathalyzer.desktop`)
 - ✅ Requirements file (`requirements.txt`)
 - ✅ Icons (`img/`)
 - ✅ Documentation (`README.md`)
@@ -68,8 +68,8 @@ package/
 ├── src/                          # Source code
 ├── img/                          # Icons and images
 ├── install.sh                    # Main installer
-├── asus-control-launcher.sh      # Launcher script
-├── asus-control.desktop          # Desktop entry
+├── daemon-breathalyzer-launcher.sh      # Launcher script
+├── daemon-breathalyzer.desktop          # Desktop entry
 ├── requirements.txt              # Python dependencies
 ├── README.md                     # Full documentation
 ├── PACKAGE_README.md            # Package-specific README

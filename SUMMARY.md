@@ -50,7 +50,7 @@
 ## 📁 Project Structure
 
 ```
-~/projects/asus-control/
+~/projects/daemon-breathalyzer/
 ├── src/
 │   ├── main.py                    # Application entry point
 │   ├── monitoring/

@@ -7,7 +7,7 @@ Comprehensive test suite for the Daemon Breathalyzer application.
 ### Run All Tests
 
 ```bash
-cd ~/projects/asus-control
+cd ~/projects/daemon-breathalyzer
 source venv/bin/activate
 pytest
 ```

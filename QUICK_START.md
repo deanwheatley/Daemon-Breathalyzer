@@ -4,7 +4,7 @@
 
 1. **Create and activate virtual environment:**
    ```bash
-   cd ~/projects/asus-control
+   cd ~/projects/daemon-breathalyzer
    python3 -m venv venv
    source venv/bin/activate
    ```

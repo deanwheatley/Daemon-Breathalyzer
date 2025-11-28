@@ -15,7 +15,7 @@ cat > /tmp/installer-head.sh << 'EOF'
 
 set -e
 
-INSTALLER_VERSION="1.2.0"
+INSTALLER_VERSION="1.3.1"
 APP_NAME="Daemon Breathalyzer"
 INSTALL_DIR="$HOME/daemon-breathalyzer"
 TEMP_DIR="/tmp/daemon-breathalyzer-install-$$"
@@ -159,10 +159,10 @@ __ARCHIVE_BELOW__
 EOF
 
 # Combine script and payload
-cat /tmp/installer-head.sh /tmp/clean-payload.tar.gz > bin/daemon-breathalyzer-installer-v1.2.0.sh
-chmod +x bin/daemon-breathalyzer-installer-v1.2.0.sh
+cat /tmp/installer-head.sh /tmp/clean-payload.tar.gz > bin/daemon-breathalyzer-installer-v1.3.1.sh
+chmod +x bin/daemon-breathalyzer-installer-v1.3.1.sh
 
 # Cleanup
 rm /tmp/installer-head.sh /tmp/clean-payload.tar.gz
 
-echo "✅ Fixed installer created: daemon-breathalyzer-installer-v1.2.0.sh"
+echo "✅ Fixed installer created: daemon-breathalyzer-installer-v1.3.1.sh"

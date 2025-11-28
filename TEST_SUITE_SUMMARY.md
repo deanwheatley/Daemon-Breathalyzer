@@ -2,7 +2,7 @@
 
 ## ✅ Test Suite Complete
 
-A comprehensive test suite has been created for the ASUS Fan Control application, covering all major features and components.
+A comprehensive test suite has been created for the Daemon Breathalyzer application, covering all major features and components.
 
 ## 📊 Test Coverage
 

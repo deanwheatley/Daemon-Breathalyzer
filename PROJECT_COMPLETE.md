@@ -88,7 +88,7 @@ All essential files verified and present:
 ```
 
 ### Launch
-- **From Application Menu:** Search for "ASUS Fan Control"
+- **From Application Menu:** Search for "Daemon Breathalyzer"
 - **From Terminal:** `python3 run.py`
 
 ### Distribution

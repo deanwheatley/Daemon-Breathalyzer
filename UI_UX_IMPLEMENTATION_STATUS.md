@@ -25,7 +25,7 @@
 ### 4. Preferences System ✓
 - Created `PreferencesManager` class
 - Supports hiding/showing individual meters
-- Preferences persist to `~/.config/asus-control/preferences.json`
+- Preferences persist to `~/.config/daemon-breathalyzer/preferences.json`
 - Default preferences for all meters set to visible
 
 ## 🚧 Next Steps for UI/UX Overhaul

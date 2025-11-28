@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Daemon Breathalyzer
+Comment=Modern GUI for laptop fan curve configuration with system monitoring and log analysis
+Exec=/home/dean/projects/asus-control/daemon-breathalyzer-launcher.sh
+Icon=daemon-breathalyzer
+Terminal=false
+Categories=System;Settings;HardwareSettings;
+StartupNotify=true
+Keywords=fan;temperature;cooling;laptop;control;daemon;breathalyzer;
+

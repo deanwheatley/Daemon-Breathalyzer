@@ -67,7 +67,7 @@
 
 2. **Set Up Development Environment**
    ```bash
-   cd ~/projects/asus-control
+   cd ~/projects/daemon-breathalyzer
    python3 -m venv venv
    source venv/bin/activate
    pip install -r requirements.txt
@@ -98,7 +98,7 @@ All documentation is in the `docs/` folder:
 ## 🎯 Current Project Location
 
 ```
-~/projects/asus-control/
+~/projects/daemon-breathalyzer/
 ├── docs/              # All documentation
 ├── src/               # Source code
 │   ├── ui/           # UI components

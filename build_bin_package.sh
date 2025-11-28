@@ -167,8 +167,8 @@ cd ~/software/${PACKAGE_NAME}-${VERSION}
 The archive contains:
 - Complete source code (\`src/\`)
 - Installation scripts (\`install.sh\`)
-- Launcher scripts (\`asus-control-launcher.sh\`)
-- Desktop entry (\`asus-control.desktop\`)
+- Launcher scripts (\`daemon-breathalyzer-launcher.sh\`)
+- Desktop entry (\`daemon-breathalyzer.desktop\`)
 - Documentation (\`README.md\`)
 - Application icons (\`img/\`)
 - Driver installation tools

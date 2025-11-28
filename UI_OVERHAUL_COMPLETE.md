@@ -48,7 +48,7 @@
 - **Location**: `src/utils/preferences_manager.py`
 - **Features**:
   - Hide/show individual meters
-  - Preferences persist to `~/.config/asus-control/preferences.json`
+  - Preferences persist to `~/.config/daemon-breathalyzer/preferences.json`
   - Default preferences for all meters visible
 
 ### 7. Responsive Scaling Layout ✓

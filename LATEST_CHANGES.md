@@ -98,7 +98,7 @@
 #### Preferences System
 - ✅ PreferencesManager enhanced with averaging_window_seconds preference
 - ✅ Default value: 60 seconds
-- ✅ Stored in ~/.config/asus-control/preferences.json
+- ✅ Stored in ~/.config/daemon-breathalyzer/preferences.json
 
 #### System Monitor
 - ✅ Added history tracking for network metrics
@@ -155,5 +155,5 @@ Configure:
 - Show/Hide individual meters
 
 Settings are saved automatically to:
-`~/.config/asus-control/preferences.json`
+`~/.config/daemon-breathalyzer/preferences.json`
 

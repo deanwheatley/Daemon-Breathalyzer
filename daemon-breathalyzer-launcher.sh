@@ -7,7 +7,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
 # Log file for debugging
-LOG_FILE="$HOME/.local/share/asus-control/launcher.log"
+LOG_FILE="$HOME/.local/share/daemon-breathalyzer/launcher.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 
 # Function to show error dialog

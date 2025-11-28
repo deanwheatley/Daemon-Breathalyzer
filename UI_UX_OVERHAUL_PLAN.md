@@ -12,7 +12,7 @@ Transform the System Monitor into a visually stunning, game-like interface with 
 ## Phase 2: Preferences System
 - [ ] Create preferences manager with persistence
 - [ ] Allow hiding/showing individual meters
-- [ ] Save preferences to ~/.config/asus-control/preferences.json
+- [ ] Save preferences to ~/.config/daemon-breathalyzer/preferences.json
 
 ## Phase 3: Scaling & Layout
 - [ ] Make dashboard responsive to window size

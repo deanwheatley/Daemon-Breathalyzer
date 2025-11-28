@@ -1,6 +1,6 @@
 # System Dependencies
 
-This document lists all system packages (apt packages) required for the ASUS Fan Control application.
+This document lists all system packages (apt packages) required for the Daemon Breathalyzer application.
 
 ## Required System Packages
 

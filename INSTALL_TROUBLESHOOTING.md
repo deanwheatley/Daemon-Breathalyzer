@@ -94,7 +94,7 @@ chmod +x install.sh
 
 The desktop entry is created in:
 ```
-~/.local/share/applications/asus-control.desktop
+~/.local/share/applications/daemon-breathalyzer.desktop
 ```
 
 If it's not there:
@@ -128,7 +128,7 @@ sudo apt install python3.12-venv  # Adjust version as needed
 ### 2. Create virtual environment
 
 ```bash
-cd ~/projects/asus-control
+cd ~/projects/daemon-breathalyzer
 python3 -m venv venv
 ```
 
@@ -143,20 +143,20 @@ pip install -r requirements.txt
 ### 4. Make launcher executable
 
 ```bash
-chmod +x asus-control-launcher.sh
+chmod +x daemon-breathalyzer-launcher.sh
 ```
 
 ### 5. Create desktop entry manually
 
 ```bash
-cat > ~/.local/share/applications/asus-control.desktop << 'EOF'
+cat > ~/.local/share/applications/daemon-breathalyzer.desktop << 'EOF'
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=ASUS Fan Control
+Name=Daemon Breathalyzer
 Comment=Modern GUI for ASUS laptop fan curve configuration with system monitoring
-Exec=/home/dean/projects/asus-control/asus-control-launcher.sh
-Path=/home/dean/projects/asus-control
+Exec=/home/dean/projects/daemon-breathalyzer/daemon-breathalyzer-launcher.sh
+Path=/home/dean/projects/daemon-breathalyzer
 Icon=applications-system
 Terminal=false
 Categories=System;Settings;HardwareSettings;
@@ -164,7 +164,7 @@ StartupNotify=true
 Keywords=asus;fan;temperature;cooling;laptop;control;
 EOF
 
-chmod +x ~/.local/share/applications/asus-control.desktop
+chmod +x ~/.local/share/applications/daemon-breathalyzer.desktop
 update-desktop-database ~/.local/share/applications
 ```
 

@@ -254,7 +254,7 @@ from ui.main_window import MainWindow
 
 def main():
     app = QApplication(sys.argv)
-    app.setApplicationName("ASUS Fan Control")
+    app.setApplicationName("Daemon Breathalyzer")
     
     window = MainWindow()
     window.show()

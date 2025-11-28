@@ -4,7 +4,7 @@
 
 Your repository is set up with the remote URL:
 ```
-https://github.com/deanwheatley/asus-control.git
+https://github.com/deanwheatley/daemon-breathalyzer.git
 ```
 
 ## To Push Your Code
@@ -14,14 +14,14 @@ https://github.com/deanwheatley/asus-control.git
 1. **Create a Personal Access Token on GitHub:**
    - Go to: https://github.com/settings/tokens
    - Click "Generate new token" → "Generate new token (classic)"
-   - Give it a name: "asus-control"
+   - Give it a name: "daemon-breathalyzer"
    - Select scopes: ✅ `repo` (all repo permissions)
    - Click "Generate token"
    - **Copy the token** (you won't see it again!)
 
 2. **Push using the token:**
    ```bash
-   cd ~/projects/asus-control
+   cd ~/projects/daemon-breathalyzer
    git push -u origin main
    ```
    
@@ -69,8 +69,8 @@ git push -u origin main
 
 5. **Change remote to SSH:**
    ```bash
-   cd ~/projects/asus-control
-   git remote set-url origin git@github.com:deanwheatley/asus-control.git
+   cd ~/projects/daemon-breathalyzer
+   git remote set-url origin git@github.com:deanwheatley/daemon-breathalyzer.git
    ```
 
 6. **Push:**
@@ -81,7 +81,7 @@ git push -u origin main
 ## Troubleshooting
 
 ### If you get "Repository not found":
-- Make sure the repository exists at: https://github.com/deanwheatley/asus-control
+- Make sure the repository exists at: https://github.com/deanwheatley/daemon-breathalyzer
 - If it doesn't exist, create it on GitHub first
 
 ### If you get authentication errors:
@@ -93,7 +93,7 @@ git push -u origin main
 
 Once authenticated, you can simply run:
 ```bash
-cd ~/projects/asus-control
+cd ~/projects/daemon-breathalyzer
 git push -u origin main
 ```
 

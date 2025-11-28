@@ -1,6 +1,6 @@
 # Dependency Management System
 
-The ASUS Fan Control application includes a comprehensive dependency management system that helps users install all required dependencies automatically or with clear step-by-step instructions.
+The Daemon Breathalyzer application includes a comprehensive dependency management system that helps users install all required dependencies automatically or with clear step-by-step instructions.
 
 ## Features
 

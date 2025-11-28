@@ -53,7 +53,7 @@ This automatically:
 3. ✅ Creates a launcher script that activates venv automatically
 4. ✅ Adds the app to your menu
 
-**When you launch the app** (from the menu or `./asus-control-launcher.sh`):
+**When you launch the app** (from the menu or `./daemon-breathalyzer-launcher.sh`):
 - The venv is activated automatically
 - You don't need to think about it
 - It just works!

@@ -1,6 +1,6 @@
 # Standalone Application Setup
 
-The ASUS Fan Control application can be installed as a standalone app that can be launched from your application menu without needing the terminal.
+The Daemon Breathalyzer application can be installed as a standalone app that can be launched from your application menu without needing the terminal.
 
 ## Installation
 
@@ -9,7 +9,7 @@ The ASUS Fan Control application can be installed as a standalone app that can b
 Run the installer script:
 
 ```bash
-cd ~/projects/asus-control
+cd ~/projects/daemon-breathalyzer
 ./install.sh
 ```
 
@@ -23,8 +23,8 @@ This will:
 ### What Gets Installed
 
 - **Virtual Environment**: `venv/` directory in project folder
-- **Desktop Entry**: `~/.local/share/applications/asus-control.desktop`
-- **Launcher Script**: `asus-control-launcher.sh` (handles venv activation automatically)
+- **Desktop Entry**: `~/.local/share/applications/daemon-breathalyzer.desktop`
+- **Launcher Script**: `daemon-breathalyzer-launcher.sh` (handles venv activation automatically)
 
 ## Launching the Application
 
@@ -32,23 +32,23 @@ After installation, you have several ways to launch:
 
 ### 1. From Application Menu (Easiest)
 - Open your application menu
-- Search for "ASUS Fan Control"
+- Search for "Daemon Breathalyzer"
 - Click to launch
 - **No terminal needed!**
 
 ### 2. Double-Click Launcher
 - Navigate to the project folder
-- Double-click `asus-control-launcher.sh`
+- Double-click `daemon-breathalyzer-launcher.sh`
 - The launcher handles everything automatically
 
 ### 3. Command Line
 ```bash
-./asus-control-launcher.sh
+./daemon-breathalyzer-launcher.sh
 ```
 
 ## How the Launcher Works
 
-The `asus-control-launcher.sh` script automatically:
+The `daemon-breathalyzer-launcher.sh` script automatically:
 - ✅ Checks if virtual environment exists (creates it if needed)
 - ✅ Activates the virtual environment
 - ✅ Checks for dependencies (installs if missing)
@@ -60,13 +60,13 @@ The `asus-control-launcher.sh` script automatically:
 To remove the desktop entry:
 
 ```bash
-rm ~/.local/share/applications/asus-control.desktop
+rm ~/.local/share/applications/daemon-breathalyzer.desktop
 ```
 
 To also remove the virtual environment:
 
 ```bash
-rm -r ~/projects/asus-control/venv
+rm -r ~/projects/daemon-breathalyzer/venv
 ```
 
 ## Troubleshooting
@@ -83,13 +83,13 @@ After running `./install.sh`, the desktop entry should appear immediately. If it
 If the launcher script encounters errors:
 1. Check that `python3-venv` is installed: `sudo apt install python3-venv`
 2. Run the installer again: `./install.sh`
-3. Or check the launcher script manually: `bash -x asus-control-launcher.sh`
+3. Or check the launcher script manually: `bash -x daemon-breathalyzer-launcher.sh`
 
 ### Permission Denied
 
 Make sure scripts are executable:
 ```bash
-chmod +x install.sh asus-control-launcher.sh
+chmod +x install.sh daemon-breathalyzer-launcher.sh
 ```
 
 ## Technical Details
@@ -98,7 +98,7 @@ chmod +x install.sh asus-control-launcher.sh
 
 The desktop entry is installed to:
 ```
-~/.local/share/applications/asus-control.desktop
+~/.local/share/applications/daemon-breathalyzer.desktop
 ```
 
 This is the user-specific location, so no sudo is needed.
@@ -115,7 +115,7 @@ This is the user-specific location, so no sudo is needed.
 
 The virtual environment is created in:
 ```
-~/projects/asus-control/venv/
+~/projects/daemon-breathalyzer/venv/
 ```
 
 This keeps everything in one place and makes it easy to manage.

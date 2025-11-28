@@ -2,7 +2,7 @@
 
 ## Summary
 
-A comprehensive test suite has been successfully created for the ASUS Fan Control application with **80+ test cases** covering all major features and components.
+A comprehensive test suite has been successfully created for the Daemon Breathalyzer application with **80+ test cases** covering all major features and components.
 
 ## 📊 Statistics
 
@@ -70,7 +70,7 @@ A comprehensive test suite has been successfully created for the ASUS Fan Contro
 
 1. **Install test dependencies:**
    ```bash
-   cd ~/projects/asus-control
+   cd ~/projects/daemon-breathalyzer
    source venv/bin/activate
    pip install -r requirements.txt
    ```

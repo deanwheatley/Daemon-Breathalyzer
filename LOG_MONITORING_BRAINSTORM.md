@@ -2,7 +2,7 @@
 
 ## Overview
 
-Extend the ASUS Fan Control application to include comprehensive system log monitoring with real-time tailing, filtering, and error tracking capabilities.
+Extend the Daemon Breathalyzer application to include comprehensive system log monitoring with real-time tailing, filtering, and error tracking capabilities.
 
 ---
 

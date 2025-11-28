@@ -1,0 +1,36 @@
+============================================================
+Daemon Breathalyzer - Installation Instructions
+============================================================
+
+QUICK START:
+------------
+
+1. Open terminal in this directory
+
+2. Run the installer:
+   ./install.sh
+
+3. The installer will:
+   - Check system requirements
+   - Create virtual environment
+   - Install all dependencies
+   - Add app to application menu
+   - Install desktop launcher
+
+4. Launch from Application Menu or run:
+   ./daemon-breathalyzer-launcher.sh
+
+DETAILED INSTRUCTIONS:
+----------------------
+
+See README.md for complete documentation.
+
+TROUBLESHOOTING:
+----------------
+
+If installation fails:
+- Check that Python 3.10+ is installed: python3 --version
+- Install python3-venv: sudo apt install python3-venv
+- Check README.md for detailed troubleshooting
+
+============================================================

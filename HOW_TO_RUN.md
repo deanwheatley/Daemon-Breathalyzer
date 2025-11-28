@@ -1,10 +1,10 @@
-# How to Run the ASUS Fan Control Application
+# How to Run the Daemon Breathalyzer Application
 
 ## Quick Start (Easiest Method)
 
 1. **Navigate to the project directory:**
    ```bash
-   cd ~/projects/asus-control
+   cd ~/projects/daemon-breathalyzer
    ```
 
 2. **Create a virtual environment (if you haven't already):**
@@ -29,7 +29,7 @@
 
 1. **Open a terminal and navigate to the project:**
    ```bash
-   cd ~/projects/asus-control
+   cd ~/projects/daemon-breathalyzer
    ```
 
 2. **Create and activate virtual environment:**
@@ -55,7 +55,7 @@
 Once you've set up the virtual environment, you only need to:
 
 ```bash
-cd ~/projects/asus-control
+cd ~/projects/daemon-breathalyzer
 source venv/bin/activate
 python run.py
 ```
@@ -101,7 +101,7 @@ pip install -r requirements.txt
 ### Virtual environment not activating
 Make sure you're in the project directory:
 ```bash
-cd ~/projects/asus-control
+cd ~/projects/daemon-breathalyzer
 source venv/bin/activate
 ```
 
@@ -115,7 +115,7 @@ chmod +x run.py
 
 ```bash
 # Navigate to project
-cd ~/projects/asus-control
+cd ~/projects/daemon-breathalyzer
 
 # Activate virtual environment
 source venv/bin/activate
@@ -135,6 +135,6 @@ Once running, you'll have access to:
 - **Profiles**: Save/load custom fan curve profiles
 - **Help Menu**: Dependency checker, About dialog
 
-Enjoy using ASUS Fan Control! 🚀
+Enjoy using Daemon Breathalyzer! 🚀
 
 

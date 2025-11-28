@@ -39,8 +39,8 @@ cp "$SCRIPT_DIR/requirements.txt" "$PACKAGE_DIR/"
 cp "$SCRIPT_DIR/install.sh" "$PACKAGE_DIR/"
 cp "$SCRIPT_DIR/run.py" "$PACKAGE_DIR/"
 cp "$SCRIPT_DIR/setup_venv.py" "$PACKAGE_DIR/"
-cp "$SCRIPT_DIR/asus-control-launcher.sh" "$PACKAGE_DIR/"
-cp "$SCRIPT_DIR/asus-control.desktop" "$PACKAGE_DIR/"
+cp "$SCRIPT_DIR/daemon-breathalyzer-launcher.sh" "$PACKAGE_DIR/"
+cp "$SCRIPT_DIR/daemon-breathalyzer.desktop" "$PACKAGE_DIR/"
 
 # Copy driver installation script
 echo "🔧 Copying driver installation scripts..."
@@ -78,8 +78,8 @@ This package contains everything you need to install and run Daemon Breathalyzer
 - `requirements.txt` - Python dependencies
 - `README.md` - Full documentation
 - `img/` - Application icons
-- `asus-control-launcher.sh` - Launcher script
-- `asus-control.desktop` - Desktop entry file
+- `daemon-breathalyzer-launcher.sh` - Launcher script
+- `daemon-breathalyzer.desktop` - Desktop entry file
 - `check_and_install_drivers.py` - Driver installation helper
 - `fix_system_log_errors.sh` - System error fixer
 
@@ -96,7 +96,7 @@ This package contains everything you need to install and run Daemon Breathalyzer
 
 3. **Launch the app:**
    - From Application Menu: Search for "Daemon Breathalyzer"
-   - Or run: `./asus-control-launcher.sh`
+   - Or run: `./daemon-breathalyzer-launcher.sh`
 
 ## 📋 Requirements
 
@@ -120,7 +120,7 @@ EOF
 # Make scripts executable
 echo "🔨 Making scripts executable..."
 chmod +x "$PACKAGE_DIR/install.sh"
-chmod +x "$PACKAGE_DIR/asus-control-launcher.sh"
+chmod +x "$PACKAGE_DIR/daemon-breathalyzer-launcher.sh"
 chmod +x "$PACKAGE_DIR/fix_system_log_errors.sh"
 
 # Create version file
@@ -148,7 +148,7 @@ QUICK START:
    - Install desktop launcher
 
 4. Launch from Application Menu or run:
-   ./asus-control-launcher.sh
+   ./daemon-breathalyzer-launcher.sh
 
 DETAILED INSTRUCTIONS:
 ----------------------

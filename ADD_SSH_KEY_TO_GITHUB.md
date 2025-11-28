@@ -16,7 +16,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA2qHy/O+EQ5styVhPh8DVGI3cmAZBycFo7SLlWX6U/e
 
 2. **Add the key:**
    - Click the green **"New SSH key"** button
-   - Title: Enter any name (e.g., "Linux Laptop", "asus-control")
+   - Title: Enter any name (e.g., "Linux Laptop", "daemon-breathalyzer")
    - Key: Paste the entire key from above
    - Click **"Add SSH key"**
 
@@ -25,7 +25,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA2qHy/O+EQ5styVhPh8DVGI3cmAZBycFo7SLlWX6U/e
 
 4. **Push your code:**
    ```bash
-   cd ~/projects/asus-control
+   cd ~/projects/daemon-breathalyzer
    git push -u origin main
    ```
 
