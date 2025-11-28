@@ -53,9 +53,6 @@ Thumbs.db
 # Profile storage (optional - uncomment if you don't want to track user profiles)
 # .config/asus-control/
 
-# Package directory (generated, but can be distributed)
-package/
-
 # Install packages - exclude archives but keep scripts and README
 bin/*.tar.gz
 bin/*.tar.gz.sha256
